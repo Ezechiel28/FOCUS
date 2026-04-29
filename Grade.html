@@ -1,0 +1,958 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FOCUS | CEU GWA/GPA Generator</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="icon" type="image/png" href="favicon/favicon-96x96.png" sizes="96x96" />
+  <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg" />
+  <link rel="shortcut icon" href="favicon/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-title" content="FOCUS" />
+  <link rel="manifest" href="/site.webmanifest" />
+
+  <style>
+    /* ===================== BASE ===================== */
+    body {
+        background: linear-gradient(135deg, #f5f6fa, #eef2ff);
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        color: #111827;
+    }
+
+    h3 {
+        font-weight: 700;
+        letter-spacing: -0.5px;
+    }
+
+    /* ================= LOADING SCREEN ================= */
+    #loadingScreen {
+        position: fixed;
+        inset: 0;
+        background: linear-gradient(135deg, #f5f6fa, #eef2ff);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        z-index: 9999;
+        color: #4f46e5;
+    }
+
+    .book-loader {
+        display: flex;
+        gap: 10px;
+    }
+
+    .book {
+        font-size: 2.5rem;
+        animation: bounce 0.6s infinite alternate;
+    }
+
+    .book:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+    .book:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+
+    @keyframes bounce {
+        from { transform: translateY(0); opacity: 0.6; }
+        to { transform: translateY(-20px); opacity: 1; }
+    }
+
+    .loading-text {
+        margin-top: 15px;
+        font-size: 1rem;
+        opacity: 0.8;
+    }
+
+    /* ===================== CARDS ===================== */
+    .card {
+        border-radius: 16px;
+        border: none;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+        transition: 0.2s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+
+    /* ===================== TOAST ===================== */
+    #toastContainer {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        width: 320px;
+    }
+
+    /* ===================== SEMESTERS ===================== */
+    .semester-item {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-radius: 10px !important;
+        margin-bottom: 6px;
+        padding: 10px 12px;
+        font-weight: 500;
+    }
+
+    .semester-item:hover {
+        background: #eef2ff;
+        transform: translateX(2px);
+    }
+
+    .semester-active {
+        background: linear-gradient(135deg, #4f46e5, #6366f1) !important;
+        color: white !important;
+        font-weight: 600;
+    }
+
+    /* ===================== TABLE ===================== */
+    .table {
+        margin-bottom: 0;
+    }
+
+    .table th {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6b7280;
+    }
+
+    .table td {
+        vertical-align: middle;
+    }
+
+    /* make inputs cleaner */
+    input.form-control,
+    select.form-control {
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        font-size: 14px;
+    }
+
+    input.form-control:focus,
+    select.form-control:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+    }
+
+    /* ===================== BUTTONS ===================== */
+    .btn {
+        border-radius: 10px;
+        font-weight: 500;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        border: none;
+    }
+
+    .btn-primary:hover {
+        opacity: 0.92;
+    }
+
+    .btn-secondary {
+        background: #111827;
+        border: none;
+    }
+
+    /* action buttons */
+    .btn-sm {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+
+    /* ===================== KPI STYLE ===================== */
+    #gwa, #gpa {
+        font-size: 22px;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    /* status text */
+    #gwaStatus, #gpaStatus {
+        font-weight: 500;
+        color: #6b7280;
+    }
+
+    /* ===================== LAYOUT ===================== */
+    .container {
+        max-width: 1200px;
+    }
+
+    /* ===================== PRINT AREA ===================== */
+    #printArea {
+        position: fixed;
+        left: -10000px;
+        top: 0;
+        width: 100%;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    @media print {
+        body * { visibility: hidden; }
+
+        #printArea, #printArea * {
+            visibility: visible;
+        }
+
+        #printArea {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            opacity: 1;
+        }
+
+        .page {
+            page-break-after: always;
+        }
+
+        .semester-block {
+            margin-bottom: 12px;
+            border: 1px solid #ddd;
+            padding: 12px;
+            border-radius: 10px;
+            break-inside: avoid;
+        }
+
+        table {
+            width: 100%;
+            font-size: 12px;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            border: 1px solid #000;
+            padding: 5px;
+        }
+    }
+
+    /* ===================== RESPONSIVE (IMPORTANT) ===================== */
+    @media (max-width: 768px) {
+
+        h3 {
+            font-size: 20px;
+        }
+
+        .row {
+            flex-direction: column;
+        }
+
+        #semesterList {
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .card {
+            margin-bottom: 15px;
+        }
+
+        .table-responsive {
+            border-radius: 12px;
+            overflow-x: auto;
+        }
+
+        .semester-item {
+            font-size: 14px;
+        }
+
+        #gwa, #gpa {
+            font-size: 20px;
+        }
+    }
+  </style>
+
+</head>
+
+<body>
+    
+    <!-- ================= LOADING SCREEN ================= -->
+    <div id="loadingScreen">
+        <div class="book-loader">
+            <div class="book">📘</div>
+            <div class="book">📗</div>
+            <div class="book">📙</div>
+        </div>
+        <div class="loading-text"><b>Loading...</b></div>
+    </div>
+
+    <div id="toastContainer"></div>
+
+    <div class="container py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h3 style="color: #4f46e5;"><span style="color: palevioletred">CEU</span> GWA/GPA Generator 📝🎓</h3>
+
+        <a class="btn btn-sm btn-outline-dark" href="index.html">
+            ← Back
+        </a>
+    </div>
+
+    <hr>
+
+    <div class="row">
+
+        <!-- SEMESTERS -->
+        <div class="col-md-3">
+        <div class="card p-3">
+            <h6>Semesters</h6>
+
+            <div class="input-group mb-2">
+            <input type="text" id="semesterName" placeholder="E.G 1st yr 1st sem A.Y 2020-21" class="form-control">
+            <button class="btn btn-primary" onclick="addSemester()">+</button>
+            </div>
+
+            <div id="semesterList" class="list-group"></div>
+        </div>
+        </div>
+
+        <!-- MAIN -->
+        <div class="col-md-9">
+
+        <div class="card p-3 mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+            <h6 id="activeSemesterTitle">No Semester Selected</h6>
+            <button class="btn btn-primary btn-sm" onclick="addRow()">+ Subject</button>
+            </div>
+
+            <table class="table mt-3" id="gradeTable">
+            <thead>
+                <tr>
+                <th>Code</th>
+                <th>Subject</th>
+                <th>Units</th>
+                <th>Final Grade</th>
+                <th>Action</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="card p-3 mb-3">
+            <h6>Semester GWA</h6>
+            <p>GWA: <span id="gwa">0.000</span></p>
+            <p id="gwaStatus"></p>
+            <p>Units: <span id="semUnits">0</span></p>
+        </div>
+
+        <div class="card p-3 mb-3">
+            <h6>Cumulative GPA</h6>
+            <p>GPA: <span id="gpa">0.000</span></p>
+            <p id="gpaStatus"></p>
+            <p>Units: <span id="totalUnits">0</span></p>
+
+            <div class="text-end mt-3">
+            <button class="btn btn-secondary" onclick="printReport()">Export PDF</button>
+            </div>
+        </div>
+
+        <div class="card p-3">
+            <h6>GWA Trend</h6>
+            <canvas id="gwaChart"></canvas>
+        </div>
+
+        </div>
+    </div>
+    </div>
+
+    <!-- EDIT SEMESTER MODAL -->
+    <div class="modal fade" id="editSemesterModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Semester Name</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <input type="text" id="editSemesterInput" class="form-control" placeholder="Semester name">
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="saveSemesterName()">Save</button>
+            </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div id="printArea"></div>
+
+    <script>
+
+        let semesters = JSON.parse(localStorage.getItem('gwa_semesters')) || {};
+        let activeSemester = localStorage.getItem('gwa_active') || null;
+        let chart;
+
+        /* ---------------- STATUS ---------------- */
+        function getGwaStatus(gwa){
+            if(gwa <= 1.20) return "President’s Lister 🥇";
+            if(gwa <= 1.50) return "Dean’s Lister 🏅";
+            if(gwa <= 3.00) return "Passed ✔";
+            return "Failed ❌";
+        }
+
+        function getGpaStatus(gpa){
+            if(gpa <= 1.20) return "Summa Cum Laude 🏆";
+            if(gpa <= 1.35) return "Magna Cum Laude 🎓";
+            if(gpa <= 1.50) return "Cum Laude 🎉";
+            if(gpa <= 3.00) return "Passed ✔";
+            return "Failed ❌";
+        }
+
+        /* ---------------- TOAST ---------------- */
+        function showToast(msg,type="info"){
+            const el=document.createElement("div");
+            el.className=`toast align-items-center text-bg-${type} border-0 show mb-2`;
+            el.innerHTML=`
+                <div class="d-flex">
+                <div class="toast-body">${msg}</div>
+                <button class="btn-close btn-close-white me-2 m-auto"
+                    onclick="this.parentElement.parentElement.remove()"></button>
+                </div>`;
+            document.getElementById("toastContainer").appendChild(el);
+            setTimeout(()=>el.remove(),3000);
+        }
+
+        /* ---------------- SAVE ---------------- */
+        function persist(){
+            localStorage.setItem('gwa_semesters',JSON.stringify(semesters));
+            localStorage.setItem('gwa_active',activeSemester);
+        }
+
+        /* ---------------- SEMESTERS ---------------- */
+        function addSemester(){
+            const name=document.getElementById("semesterName").value.trim();
+            if(!name){showToast("Semester name required","danger");return;}
+
+            const id=Date.now().toString();
+            semesters[id]={name,rows:[]};
+
+            document.getElementById("semesterName").value="";
+            renderSemesters();
+            selectSemester(id);
+            persist();
+        }
+
+        function renderSemesters(){
+            const list=document.getElementById("semesterList");
+            list.innerHTML="";
+
+            Object.keys(semesters).forEach(id=>{
+                const div=document.createElement("div");
+                div.className="list-group-item semester-item d-flex justify-content-between";
+                if(id===activeSemester) div.classList.add("semester-active");
+
+                const left=document.createElement("div");
+                left.innerText=semesters[id].name;
+                left.onclick=()=>selectSemester(id);
+
+                const actions=document.createElement("div");
+
+                const edit=document.createElement("button");
+                edit.className="btn btn-sm btn-outline-primary me-1";
+                edit.innerText="✎";
+                edit.onclick=(e)=>{
+                    e.stopPropagation();
+                    openEditModal(id);
+                };
+
+                const del=document.createElement("button");
+                del.className="btn btn-sm btn-outline-danger";
+                del.innerText="🗑";
+                del.onclick=(e)=>{
+                    e.stopPropagation();
+                    delete semesters[id];
+                    if(activeSemester===id) activeSemester=null;
+                    persist();
+                    renderSemesters();
+                    renderTable();
+                    calculateGWA();
+                    calculateGPA();
+                    updateChart();
+                    showToast("Semester deleted","danger");
+                };
+
+                actions.appendChild(edit);
+                actions.appendChild(del);
+                div.appendChild(left);
+                div.appendChild(actions);
+                list.appendChild(div);
+            });
+        }
+
+        function selectSemester(id){
+            activeSemester=id;
+            document.getElementById("activeSemesterTitle").innerText=semesters[id].name;
+            renderSemesters();
+            renderTable();
+            calculateGWA();
+            calculateGPA();
+            updateChart();
+            persist();
+        }
+
+        /* ---------------- TABLE ---------------- */
+        function addRow(){
+            if(!activeSemester){
+                showToast("Select a semester first","warning");
+                return;
+            }
+
+            semesters[activeSemester].rows.push({
+                code:"",
+                subject:"",
+                units:"",
+                grade:"1.00",
+                includeGwa:true
+            });
+
+            persist();
+            renderTable();
+            calculateGWA();
+            calculateGPA();
+            updateChart();
+        }
+
+        function syncFromTable(){
+            if(!activeSemester) return;
+
+            const rows=document.querySelectorAll("#gradeTable tbody tr");
+
+            semesters[activeSemester].rows = Array.from(rows).map((r,i)=>({
+                code:r.querySelector('.code')?.value||"",
+                subject:r.querySelector('.subject')?.value||"",
+                units:r.querySelector('.units')?.value||"",
+                grade:r.querySelector('.grade')?.value||"1.00",
+                includeGwa: semesters[activeSemester].rows[i]?.includeGwa !== false
+            }));
+        }
+
+        /* ---------------- TABLE RENDER ---------------- */
+        function renderTable(){
+            const tbody=document.querySelector("#gradeTable tbody");
+            tbody.innerHTML="";
+            if(!activeSemester) return;
+
+            semesters[activeSemester].rows.forEach((r,i)=>{
+                const tr=document.createElement("tr");
+
+                tr.innerHTML=`
+                <td><input class="form-control code" value="${r.code||""}"></td>
+                <td><input class="form-control subject" value="${r.subject||""}"></td>
+                <td><input class="form-control units" value="${r.units||""}"></td>
+                <td>
+                    <select class="form-control grade">
+                    ${["1.00","1.25","1.50","1.75","2.00","2.25","2.50","2.75","3.00","5.00"]
+                        .map(x=>`<option ${x==r.grade?'selected':''}>${x}</option>`).join("")}
+                    </select>
+                </td>
+                <td>
+                    <button class="btn btn-danger btn-sm">X</button>
+                    <button class="btn btn-sm ${r.includeGwa===false?"btn-danger":"btn-outline-secondary"}">🚫</button>
+                </td>
+                `;
+
+                tr.querySelector(".btn-danger").onclick=()=>{
+                    semesters[activeSemester].rows.splice(i,1);
+                    persist();
+                    renderTable();
+                    calculateGWA();
+                    calculateGPA();
+                    updateChart();
+                };
+
+                tr.querySelectorAll("button")[1].onclick=()=>{
+                    semesters[activeSemester].rows[i].includeGwa =
+                        !semesters[activeSemester].rows[i].includeGwa;
+
+                    persist();
+                    renderTable();
+                    calculateGWA();
+                    calculateGPA();
+                    updateChart();
+                };
+
+                tr.querySelectorAll("input,select").forEach(el=>{
+                    el.oninput=()=>{
+                        syncFromTable();
+                        persist();
+                        calculateGWA();
+                        calculateGPA();
+                        updateChart();
+                    };
+                });
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        /* ---------------- COMPUTE ---------------- */
+        function calculateGWA(){
+            if(!activeSemester) return;
+
+            let totalPoints = 0;
+            let gwaUnits = 0;
+            let totalUnitsAll = 0;
+
+            semesters[activeSemester].rows.forEach(r=>{
+                const g = parseFloat(r.grade);
+                const uu = parseFloat(r.units);
+
+                // ✅ ALWAYS count units (even if excluded)
+                if(!isNaN(uu)){
+                    totalUnitsAll += uu;
+                }
+
+                // ✅ ONLY include in GWA if not marked
+                if(r.includeGwa !== false && !isNaN(g) && !isNaN(uu)){
+                    totalPoints += g * uu;
+                    gwaUnits += uu;
+                }
+            });
+
+            const gwa = gwaUnits ? totalPoints / gwaUnits : 0;
+
+            document.getElementById("gwa").innerText = gwa.toFixed(3);
+
+            // ✅ FIX: display ALL units (including marked 🚫)
+            document.getElementById("semUnits").innerText = totalUnitsAll;
+
+            document.getElementById("gwaStatus").innerText = getGwaStatus(gwa);
+        }
+
+        function calculateGPA(){
+            let totalPoints = 0;
+            let totalUnitsGwa = 0;
+            let totalUnitsAll = 0;
+
+            Object.values(semesters).forEach(s=>{
+                s.rows.forEach(r=>{
+                    const g=parseFloat(r.grade);
+                    const uu=parseFloat(r.units);
+
+                    if(!isNaN(uu)){
+                        totalUnitsAll += uu;
+                    }
+
+                    if(r.includeGwa !== false && !isNaN(g)&&!isNaN(uu)){
+                        totalPoints += g*uu;
+                        totalUnitsGwa += uu;
+                    }
+                });
+            });
+
+            const gpa = totalUnitsGwa ? totalPoints/totalUnitsGwa : 0;
+
+            document.getElementById("gpa").innerText=gpa.toFixed(3);
+            document.getElementById("totalUnits").innerText=totalUnitsAll;
+            document.getElementById("gpaStatus").innerText=getGpaStatus(gpa);
+        }
+
+        /* ---------------- CHART ---------------- */
+        function updateChart(){
+            const labels = [], data = [];
+
+            Object.values(semesters).forEach(s=>{
+                let t = 0, u = 0;
+
+                s.rows.forEach(r=>{
+                    if(r.includeGwa === false) return;
+
+                    const g = parseFloat(r.grade);
+                    const uu = parseFloat(r.units);
+
+                    if(!isNaN(g) && !isNaN(uu)){
+                        t += g * uu;
+                        u += uu;
+                    }
+                });
+
+                if(u > 0){
+                    let gwaVal = t / u;
+
+                    // clamp failed values
+                    if(gwaVal > 3.0) gwaVal = 3.0;
+
+                    labels.push(s.name);
+                    data.push(parseFloat(gwaVal.toFixed(3)));
+                }
+            });
+
+            if(chart) chart.destroy();
+
+            chart = new Chart(document.getElementById("gwaChart"), {
+                type: "line",
+                data: {
+                    labels,
+                    datasets: [{
+                        label: "GWA",
+                        data,
+                        tension: 0.3,
+                        pointRadius: 4,
+
+                        segment: {
+                            borderColor: ctx => {
+                                const val = ctx.p1.parsed.y;
+                                return val >= 3.0 ? "red" : "#4f46e5";
+                            }
+                        },
+                        pointBackgroundColor: data.map(v => v >= 3.0 ? "red" : "#4f46e5")
+                    }]
+                },
+                options:{
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context){
+                                    const val = context.parsed.y;
+
+                                    let status = "";
+
+                                    if(val <= 1.20) status = "President’s Lister 🥇";
+                                    else if(val <= 1.50) status = "Dean’s Lister 🏅";
+                                    else if(val <= 3.00) status = "Passed ✔";
+                                    else status = "Failed ❌";
+
+                                    // if clamped at 3.00 but actually failed
+                                    if(val === 3.0){
+                                        status = "Failed ❌";
+                                    }
+
+                                    return `GWA: ${val.toFixed(3)} — ${status}`;
+                                }
+                            }
+                        }
+                    },
+
+                    scales:{
+                        y:{
+                            reverse: true,
+                            min: 1.0,
+                            max: 3.0,
+                            ticks: {
+                                stepSize: 0.25,
+                                callback: function(value){
+                                    return value.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        /* ---------------- INIT ---------------- */
+        window.onload=()=>{
+            renderSemesters();
+            if(activeSemester&&semesters[activeSemester]) selectSemester(activeSemester);
+            updateChart();
+        };
+
+        /* ---------------- PRINT REPORT ---------------- */
+        function printReport(){
+            const printArea = document.getElementById("printArea");
+            printArea.innerHTML = "";
+
+            const semesterEntries = Object.entries(semesters);
+
+            function getSemesterStatus(gwa){
+                if(gwa <= 2.00) return "PASSED";
+                if(gwa <= 3.00) return "BARELY PASSED";
+                return "FAILED";
+            }
+
+            function getHonor(gwa){
+                if(gwa <= 1.20) return "President’s Lister 🥇";
+                if(gwa <= 1.50) return "Dean’s Lister 🏅";
+                return "";
+            }
+
+            let cumulativePoints = 0;
+            let cumulativeUnits = 0;      // GPA ONLY (excludes 🚫)
+            let cumulativeUnitsAll = 0;   // DISPLAY ONLY (includes 🚫)
+
+            let page = null;
+
+            semesterEntries.forEach(([id, sem], index)=>{
+
+                if(index % 2 === 0){
+                    page = document.createElement("div");
+                    page.className = "page";
+                    page.innerHTML = `<div style="text-align:center;font-weight:bold;">GWA / GPA REPORT</div><hr>`;
+                    printArea.appendChild(page);
+                }
+
+                let totalUnits = 0;
+                let gwaUnits = 0;
+                let totalPoints = 0;
+
+                sem.rows.forEach(r=>{
+                    const u = parseFloat(r.units);
+                    const g = parseFloat(r.grade);
+
+                    if(!isNaN(u)) totalUnits += u;
+
+                    if(r.includeGwa !== false && !isNaN(u) && !isNaN(g)){
+                        gwaUnits += u;
+                        totalPoints += u * g;
+                    }
+                });
+
+                const gwa = gwaUnits ? (totalPoints / gwaUnits) : 0;
+
+                cumulativeUnits += gwaUnits;
+                cumulativePoints += totalPoints;
+                cumulativeUnitsAll += totalUnits; // ✅ FIXED
+
+                const semesterStatus = getSemesterStatus(gwa);
+                const honor = getHonor(gwa);
+
+                const rowsHtml = sem.rows.map(r=>`
+                    <tr>
+                        <td>${r.code||""}</td>
+                        <td>${r.subject||""}</td>
+                        <td>${r.units||""}</td>
+                        <td>${r.grade||""}</td>
+                    </tr>
+                `).join("");
+
+                const block = document.createElement("div");
+                block.className = "semester-block";
+                block.innerHTML = `
+                    <h5>${sem.name}</h5>
+
+                    <table border="1">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Subject</th>
+                                <th>Units</th>
+                                <th>Grade</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+
+                    <p><strong>Total Units:</strong> ${totalUnits}</p>
+                    <p><strong>GWA:</strong> ${gwa.toFixed(3)}</p>
+                    <p><strong>Status:</strong> ${semesterStatus}</p>
+                    ${honor ? `<p><strong>Award:</strong> ${honor}</p>` : ""}
+                `;
+
+                page.appendChild(block);
+            });
+
+            const finalGPA = cumulativeUnits ? (cumulativePoints / cumulativeUnits) : 0;
+
+            let finalStatus = "GRADUATE";
+            let latinHonor = "";
+
+            if(finalGPA > 3.00){
+                finalStatus = "NOT GRADUATE";
+            }
+
+            if(finalGPA <= 1.20) latinHonor = "Summa Cum Laude 🏆";
+            else if(finalGPA <= 1.35) latinHonor = "Magna Cum Laude 🎓";
+            else if(finalGPA <= 1.50) latinHonor = "Cum Laude 🎉";
+
+            const finalPage = document.createElement("div");
+            finalPage.className = "page";
+
+            finalPage.innerHTML = `
+                <div style="text-align:center;font-weight:bold;">
+                    CUMULATIVE GPA REPORT
+                </div>
+                <hr>
+
+                <h4>Final Summary</h4>
+                <br>
+
+                <table border="1" style="width:50%; border-collapse: collapse; font-size: 14px;">
+                    <tr>
+                        <th>Total Units</th>
+                        <td>${cumulativeUnitsAll}</td>
+                    </tr>
+                    <tr>
+                        <th>Cumulative GPA</th>
+                        <td>${finalGPA.toFixed(3)}</td>
+                    </tr>
+                    <tr>
+                        <th>Status</th>
+                        <td>${finalStatus}</td>
+                    </tr>
+                    <tr>
+                        <th>Latin Honor</th>
+                        <td>${latinHonor || "—"}</td>
+                    </tr>
+                </table>
+            `;
+
+            
+            printArea.appendChild(finalPage);
+
+            setTimeout(()=>window.print(),250);
+        }
+
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+    let editingSemesterId = null;
+    let editModal = new bootstrap.Modal(document.getElementById('editSemesterModal'));
+
+    function openEditModal(id){
+        editingSemesterId = id;
+        document.getElementById("editSemesterInput").value = semesters[id].name;
+        editModal.show();
+    }
+
+    function saveSemesterName(){
+        const newName = document.getElementById("editSemesterInput").value.trim();
+
+        if(!newName){
+            showToast("Semester name required","danger");
+            return;
+        }
+
+        semesters[editingSemesterId].name = newName;
+
+        if(activeSemester === editingSemesterId){
+            document.getElementById("activeSemesterTitle").innerText = newName;
+        }
+
+        persist();
+        renderSemesters();
+        updateChart();
+
+        editModal.hide();
+        showToast("Semester renamed","success");
+    }
+    </script>
+
+    <!-- LOADING SCRIPT -->
+    <script>
+    window.addEventListener("load", function () {
+        setTimeout(() => {
+            document.getElementById("loadingScreen").style.display = "none";
+            document.getElementById("mainContent").style.display = "block";
+        }, 3000);
+    });
+    </script>
+
+</body>
+
+</html>

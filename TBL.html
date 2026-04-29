@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FOCUS | Schedule Builder</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="icon" type="image/png" href="favicon/favicon-96x96.png" sizes="96x96" />
+<link rel="icon" type="image/svg+xml" href="favicon/favicon.svg" />
+<link rel="shortcut icon" href="favicon/favicon.ico" />
+<link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-title" content="FOCUS" />
+<link rel="manifest" href="/site.webmanifest" />
+
+<style>
+/* ===================== BASE ===================== */
+body {
+    background: linear-gradient(135deg, #f5f6fa, #eef2ff);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    color: #111827;
+}
+
+.card {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+}
+
+/* ================= LOADING SCREEN ================= */
+#loadingScreen {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg, #f5f6fa, #eef2ff);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    z-index: 9999;
+    color: #4f46e5;
+}
+
+.book-loader {
+    display: flex;
+    gap: 10px;
+}
+
+.book {
+    font-size: 2.5rem;
+    animation: bounce 0.6s infinite alternate;
+}
+
+.book:nth-child(2) {
+    animation-delay: 0.2s;
+}
+.book:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes bounce {
+    from { transform: translateY(0); opacity: 0.6; }
+    to { transform: translateY(-20px); opacity: 1; }
+}
+
+.loading-text {
+    margin-top: 15px;
+    font-size: 1rem;
+    opacity: 0.8;
+}
+
+/* ===================== TABLE ===================== */
+.schedule-wrapper {
+    overflow-x: auto;
+}
+
+#scheduleTable {
+    background: white;
+    border-radius: 14px;
+}
+
+#scheduleTable th {
+    background: #f9fafb;
+    text-align: center;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+#scheduleTable td {
+    height: 90px;
+    min-width: 140px;
+    cursor: pointer;
+    transition: 0.15s ease;
+}
+
+.schedule-cell:hover {
+    background: #eef2ff !important;
+}
+
+.time-cell {
+    min-width: 160px;
+    background: #fafafa;
+}
+
+.time-display {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+/* ===================== CLASS BLOCK ===================== */
+.class-block {
+    font-size: 13px;
+    line-height: 1.3;
+}
+
+.class-block div {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ===================== LEGEND ===================== */
+#legendContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: white;
+    padding: 6px 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.legend-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+}
+
+/* ===================== TOAST ===================== */
+#toastContainer {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    width: 320px;
+}
+
+/* ===================== BUTTONS ===================== */
+.btn-primary {
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    border: none;
+}
+
+.btn-primary:hover {
+    opacity: 0.92;
+}
+</style>
+</head>
+
+<body>
+
+<!-- ================= LOADING SCREEN ================= -->
+<div id="loadingScreen">
+    <div class="book-loader">
+        <div class="book">📘</div>
+        <div class="book">📗</div>
+        <div class="book">📙</div>
+    </div>
+    <div class="loading-text"><b>Loading...</b></div>
+</div>
+
+<div class="container py-4">
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h3 style="color: #4f46e5;">📅 Schedule Builder</h3>
+
+    <a class="btn btn-sm btn-outline-dark" href="index.html">
+        ← Back
+    </a>
+</div>
+
+<hr>
+
+<div class="card p-3">
+
+<h5 class="mb-3">Organize Your Schedule</h5>
+
+<div class="schedule-wrapper">
+<table class="table table-bordered text-center align-middle" id="scheduleTable">
+<thead>
+<tr>
+<th>Time</th>
+<th>Mon</th>
+<th>Tue</th>
+<th>Wed</th>
+<th>Thu</th>
+<th>Fri</th>
+<th>Sat</th>
+</tr>
+</thead>
+<tbody id="scheduleBody"></tbody>
+</table>
+</div>
+
+<div class="mt-3 d-flex gap-2">
+<button class="btn btn-primary btn-sm" onclick="addRow()">Add Row</button>
+<button class="btn btn-danger btn-sm" onclick="openClearModal()">
+    Clear
+</button>
+<button class="btn btn-dark btn-sm" onclick="exportPDF()">
+    Export PDF
+</button>
+</div>
+
+</div>
+
+<!-- 
+<div class="card p-3 mt-3">
+<h6>Legend</h6>
+<div id="legendContainer"></div>
+
+<div class="d-flex gap-2 mt-2">
+<input id="legendText" class="form-control" placeholder="Legend label">
+<input type="color" id="legendColor" class="form-control form-control-color">
+<button class="btn btn-primary btn-sm" onclick="addLegend()">Add</button>
+</div>
+</div>
+-->
+
+</div>
+
+<!-- MODAL -->
+<div class="modal fade" id="classModal">
+<div class="modal-dialog">
+<div class="modal-content">
+
+<div class="modal-header">
+<h5 class="modal-title">Edit Class</h5>
+<button class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<div class="modal-body">
+
+    <label class="form-label">Subject Code</label>
+    <input id="subjCode" class="form-control mb-2" placeholder="Enter subject code">
+
+    <label class="form-label">Subject Name <span class="text-danger">*</span></label>
+    <input id="subjName" class="form-control mb-2" placeholder="Enter subject name">
+
+    <label class="form-label">Room</label>
+    <input id="room" class="form-control mb-2" placeholder="Enter room">
+
+    <label class="form-label">Professor</label>
+    <input id="prof" class="form-control mb-2" placeholder="Enter professor name">
+
+    <label class="form-label">Online Link</label>
+    <input id="link" class="form-control mb-2" placeholder="Paste meeting link">
+
+    <label class="form-label">Color Tag</label>
+    <input type="color" id="colorPicker" class="form-control form-control-color">
+
+    <label class="form-label">Font Color</label>
+    <input type="color" id="fontColorPicker" class="form-control form-control-color">
+
+</div>
+
+<div class="modal-footer">
+<button class="btn btn-primary" onclick="saveClass()">Save</button>
+</div>
+
+</div>
+</div>
+</div>
+
+<div class="modal fade" id="clearConfirmModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Clear Schedule</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        Are you sure you want to <b>clear all schedule data</b>?  
+        This action cannot be undone.
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button class="btn btn-danger" onclick="confirmClearSchedule()">
+          Clear
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toastContainer">
+<div id="liveToast" class="toast text-white border-0">
+<div class="d-flex">
+<div class="toast-body" id="toastMsg"></div>
+<button class="btn-close btn-close-white m-auto me-2" data-bs-dismiss="toast"></button>
+</div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+let selectedCell = null;
+let draggedCell = null;
+
+const MIN_ROWS = 1;
+
+/* ================= DOM CACHE ================= */
+const scheduleBody = document.getElementById("scheduleBody");
+const toastMsg = document.getElementById("toastMsg");
+const legendContainer = document.getElementById("legendContainer");
+const legendText = document.getElementById("legendText");
+const legendColor = document.getElementById("legendColor");
+
+const subjCode = document.getElementById("subjCode");
+const subjName = document.getElementById("subjName");
+const room = document.getElementById("room");
+const prof = document.getElementById("prof");
+const link = document.getElementById("link");
+const colorPicker = document.getElementById("colorPicker");
+const fontColorPicker = document.getElementById("fontColorPicker");
+
+/* ================= TIME ================= */
+function formatAMPM(time) {
+    if (!time) return "";
+    let [h, m] = time.split(":");
+    h = parseInt(h);
+    let ampm = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+    return `${h}:${m} ${ampm}`;
+}
+
+/* ================= CONTRAST ================= */
+function getContrastColor(hex) {
+    if (!hex) return "#111827";
+
+    hex = hex.replace("#", "");
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness > 150 ? "#111827" : "#ffffff";
+}
+
+/* ================= ADD ROW ================= */
+function addRow(fromLoad = false, rowData = null) {
+    const row = document.createElement("tr");
+
+    const timeCell = document.createElement("td");
+    timeCell.classList.add("time-cell");
+
+    const startVal = rowData?.start || "";
+    const endVal = rowData?.end || "";
+
+    // detect if this is the first row in DOM (default row)
+    const isFirstRow = document.querySelectorAll("#scheduleBody tr").length === 0;
+
+    timeCell.innerHTML = `
+        <div class="d-flex flex-column gap-1">
+            <input type="time" class="form-control start-time mb-1" value="${startVal}">
+            <input type="time" class="form-control end-time" value="${endVal}">
+
+            <div class="time-display mt-1">
+                ${formatAMPM(startVal)} - ${formatAMPM(endVal)}
+            </div>
+
+            ${!isFirstRow ? `
+                <button class="btn btn-sm btn-outline-danger delete-row-btn mt-1">
+                    Delete Row
+                </button>
+            ` : ``}
+        </div>
+    `;
+
+    row.appendChild(timeCell);
+
+    // delete handler only if button exists
+    const deleteBtn = timeCell.querySelector(".delete-row-btn");
+
+    if (deleteBtn) {
+        deleteBtn.addEventListener("click", () => {
+            const totalRows = document.querySelectorAll("#scheduleBody tr").length;
+
+            if (totalRows <= 1) {
+                showToast("Default row cannot be removed.", "warning");
+                return;
+            }
+
+            row.remove();
+            saveToLocal();
+            showToast("Row deleted.", "success");
+        });
+    }
+
+    for (let i = 0; i < 6; i++) {
+        const cell = document.createElement("td");
+        cell.classList.add("schedule-cell");
+        cell.setAttribute("draggable", true);
+
+        const c = rowData?.cells?.[i];
+
+        const bg = c?.color || "";
+        const font = c?.fontcolor || getContrastColor(bg);
+
+        cell.dataset.code = c?.code || "";
+        cell.dataset.name = c?.name || "";
+        cell.dataset.room = c?.room || "";
+        cell.dataset.prof = c?.prof || "";
+        cell.dataset.link = c?.link || "";
+        cell.dataset.color = bg;
+        cell.dataset.fontcolor = font;
+
+        if (c?.name || c?.code) {
+            cell.style.backgroundColor = bg;
+            cell.style.color = font;
+            cell.style.fontWeight = "700";
+
+            cell.innerHTML = `
+                <div class="class-block">
+                    <strong>${c.code || ""}</strong>
+                    <div>${c.name || ""}</div>
+                    <div>${c.room || ""}</div>
+                    <div>${c.prof || ""}</div>
+                    ${c.link ? `<div><a href="${c.link}" target="_blank">Online Link</a></div>` : ""}
+                </div>
+            `;
+        }
+
+        row.appendChild(cell);
+    }
+
+    scheduleBody.appendChild(row);
+
+    if (!fromLoad) saveToLocal();
+}
+
+function ensureMinimumRows() {
+    const rows = document.querySelectorAll("#scheduleBody tr");
+
+    if (rows.length < 1) {
+        addRow();
+    }
+}
+
+/* ================= TIME UPDATE ================= */
+document.addEventListener("input", (e) => {
+    if (e.target.classList.contains("start-time") ||
+        e.target.classList.contains("end-time")) {
+
+        const td = e.target.closest("td");
+        const s = td.querySelector(".start-time")?.value;
+        const e2 = td.querySelector(".end-time")?.value;
+
+        td.querySelector(".time-display").innerText =
+            `${formatAMPM(s)} - ${formatAMPM(e2)}`;
+
+        saveToLocal();
+    }
+});
+
+/* ================= CELL CLICK ================= */
+document.addEventListener("click", (e) => {
+    const cell = e.target.closest(".schedule-cell");
+    if (!cell) return;
+
+    selectedCell = cell;
+
+    subjCode.value = cell.dataset.code || "";
+    subjName.value = cell.dataset.name || "";
+    room.value = cell.dataset.room || "";
+    prof.value = cell.dataset.prof || "";
+    link.value = cell.dataset.link || "";
+    colorPicker.value = cell.dataset.color || "#ffffff";
+    fontColorPicker.value = cell.dataset.fontcolor || "#111827";
+
+    new bootstrap.Modal(document.getElementById("classModal")).show();
+});
+
+/* ================= SAVE CLASS ================= */
+function saveClass() {
+    if (!selectedCell) return showToast("No cell selected", "danger");
+    if (!subjName.value) return showToast("Subject Name required", "danger");
+
+    const bg = colorPicker.value;
+    const font = getContrastColor(bg);
+
+    Object.assign(selectedCell.dataset, {
+        code: subjCode.value,
+        name: subjName.value,
+        room: room.value,
+        prof: prof.value,
+        link: link.value,
+        color: bg,
+        fontcolor: font
+    });
+
+    selectedCell.style.backgroundColor = bg;
+    selectedCell.style.color = font;
+    selectedCell.style.fontWeight = "700";
+
+    selectedCell.innerHTML = `
+        <div class="class-block">
+            <strong>${subjCode.value}</strong>
+            <div>${subjName.value}</div>
+            <div>${room.value}</div>
+            <div>${prof.value}</div>
+            ${link.value ? `<div><a href="${link.value}" target="_blank">Online Link</a></div>` : ""}
+        </div>
+    `;
+
+    bootstrap.Modal.getInstance(document.getElementById("classModal")).hide();
+    saveToLocal();
+    showToast("Saved", "success");
+}
+
+/* ================= TOAST ================= */
+function showToast(msg, type = "primary") {
+    const t = document.getElementById("liveToast");
+
+    t.className = `toast border-0 text-white bg-${type}`;
+    toastMsg.innerText = msg;
+
+    new bootstrap.Toast(t).show();
+}
+
+/* ================= DRAG & DROP ================= */
+function swapCells(a, b) {
+    const tempHTML = a.innerHTML;
+    const tempData = { ...a.dataset };
+
+    a.innerHTML = b.innerHTML;
+    b.innerHTML = tempHTML;
+
+    Object.assign(a.dataset, b.dataset);
+    Object.assign(b.dataset, tempData);
+}
+
+document.addEventListener("dragstart", (e) => {
+    if (e.target.classList.contains("schedule-cell")) {
+        draggedCell = e.target;
+    }
+});
+
+document.addEventListener("dragover", (e) => {
+    if (e.target.closest(".schedule-cell")) {
+        e.preventDefault();
+    }
+});
+
+document.addEventListener("drop", (e) => {
+    const target = e.target.closest(".schedule-cell");
+    if (!target || !draggedCell || target === draggedCell) return;
+
+    swapCells(target, draggedCell);
+    saveToLocal();
+});
+
+/* ================= LEGEND ================= */
+function addLegend() {
+    const text = legendText.value;
+    const color = legendColor.value;
+
+    const div = document.createElement("div");
+    div.className = "legend-item";
+    div.innerHTML = `
+        <span class="legend-color" style="background:${color}"></span>
+        ${text}
+    `;
+
+    legendContainer.appendChild(div);
+    saveToLocal();
+}
+
+/* ================= STORAGE ================= */
+function saveToLocal() {
+    const rows = [];
+
+    document.querySelectorAll("#scheduleBody tr").forEach(row => {
+
+        const timeCell = row.querySelector(".time-cell");
+        if (!timeCell) return;
+
+        const start = timeCell.querySelector(".start-time")?.value || "";
+        const end = timeCell.querySelector(".end-time")?.value || "";
+
+        const cells = [];
+
+        row.querySelectorAll(".schedule-cell").forEach(cell => {
+            cells.push({
+                code: cell.dataset.code || "",
+                name: cell.dataset.name || "",
+                room: cell.dataset.room || "",
+                prof: cell.dataset.prof || "",
+                link: cell.dataset.link || "",
+                color: cell.dataset.color || "",
+                fontcolor: cell.dataset.fontcolor || ""
+            });
+        });
+
+        rows.push({ start, end, cells });
+    });
+
+    localStorage.setItem("scheduleData", JSON.stringify(rows));
+}
+
+/* ================= LOAD (FIXED ROOT ISSUE) ================= */
+window.onload = () => {
+    const data = JSON.parse(localStorage.getItem("scheduleData") || "[]");
+
+    scheduleBody.innerHTML = "";
+
+    if (data.length > 0) {
+        data.forEach(row => addRow(true, row));
+    }
+
+    ensureMinimumRows(); // 👈 guarantees 1 row always exists
+
+    loadLegend();
+};
+
+/* ================= CLEAR ================= */
+function openClearModal() {
+    new bootstrap.Modal(document.getElementById("clearConfirmModal")).show();
+}
+
+function confirmClearSchedule() {
+    const rows = document.querySelectorAll("#scheduleBody tr");
+    const isOnlyDefaultRow = rows.length <= 1;
+
+    localStorage.removeItem("scheduleData");
+    scheduleBody.innerHTML = "";
+
+    ensureMinimumRows();
+    saveToLocal();
+
+    // ✅ CLOSE MODAL (safe + guaranteed)
+    const modalEl = document.querySelector(".modal.show");
+    if (modalEl) {
+        const instance = bootstrap.Modal.getInstance(modalEl);
+        if (instance) instance.hide();
+    }
+
+    // fallback close (in case instance is not found)
+    document.querySelectorAll(".modal.show").forEach(m => {
+        const inst = bootstrap.Modal.getInstance(m);
+        if (inst) inst.hide();
+    });
+
+    // ✅ TOAST
+    if (isOnlyDefaultRow) {
+        showToast("Default row cleared.", "success");
+    } else {
+        showToast("Schedule cleared successfully.", "success");
+    }
+}
+
+/* ================= EXPORT PDF ================= */
+async function exportPDF() {
+    showToast("Generating preview...", "primary");
+
+    const original = document.getElementById("scheduleTable");
+    const renderArea = document.getElementById("pdfRenderArea");
+
+    const clone = original.cloneNode(true);
+
+    clone.querySelectorAll(".time-cell").forEach(td => {
+        const display = td.querySelector(".time-display")?.innerText || "";
+
+        td.style.border = "1px solid #d1d5db"; // ✅ ADD BORDER
+
+        td.innerHTML = `
+            <div style="
+                font-weight:700;
+                text-align:center;
+            ">
+                ${display}
+            </div>
+        `;
+    });
+
+    clone.querySelectorAll(".schedule-cell").forEach(cell => {
+        const bg = cell.dataset.color || "#fff";
+        const font = cell.dataset.fontcolor || "#111";
+
+        const code = cell.dataset.code || "";
+        const name = cell.dataset.name || "";
+        const room = cell.dataset.room || "";
+        const prof = cell.dataset.prof || "";
+        const link = cell.dataset.link || "";
+
+        cell.style.backgroundColor = bg;
+        cell.style.color = font;
+
+        /* ✅ FORCE GRID BORDERS FOR PDF */
+        cell.style.border = "1px solid #d1d5db";
+
+        cell.innerHTML = `
+            <div style="
+                font-weight:700;
+                color:${font};
+                line-height:1.2;
+            ">
+                <strong>${code}</strong><br>
+                ${name}<br>
+                ${room}<br>
+                ${prof}<br>
+                ${link ? `<span>${link}</span>` : ""}
+            </div>
+        `;
+    });
+
+    renderArea.innerHTML = "";
+    renderArea.appendChild(clone);
+
+    clone.style.width = "1200px";
+
+    await new Promise(r => setTimeout(r, 300));
+
+    const canvas = await html2canvas(clone, {
+        scale: 3,
+        useCORS: true,
+        backgroundColor: "#ffffff"
+    });
+
+    renderArea.innerHTML = "";
+
+    const imgData = canvas.toDataURL("image/png");
+    document.getElementById("pdfPreviewImg").src = imgData;
+
+    window._pdfCanvas = canvas;
+
+    new bootstrap.Modal(document.getElementById("pdfPreviewModal")).show();
+}
+
+function confirmExportPDF() {
+    const { jsPDF } = window.jspdf;
+
+    const canvas = window._pdfCanvas;
+
+    const pdf = new jsPDF("landscape", "pt", "a4");
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const imgHeight = (canvas.height * pageWidth) / canvas.width;
+
+    pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 20, pageWidth, imgHeight);
+
+    pdf.save("Class_Schedule.pdf");
+
+    bootstrap.Modal.getInstance(document.getElementById("pdfPreviewModal")).hide();
+    showToast("PDF exported", "success");
+}
+</script>
+
+<!-- LOADING SCRIPT -->
+<script>
+  window.addEventListener("load", function () {
+      setTimeout(() => {
+          document.getElementById("loadingScreen").style.display = "none";
+          document.getElementById("mainContent").style.display = "block";
+      }, 3000);
+  });
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<div class="modal fade" id="pdfPreviewModal" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">PDF Preview</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body text-center">
+        <img id="pdfPreviewImg" class="img-fluid border rounded">
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button class="btn btn-primary" onclick="confirmExportPDF()">
+          Export PDF
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="pdfRenderArea" style="
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 1200px;
+    background: white;
+    z-index: -9999;
+    opacity: 0;
+    pointer-events: none;
+"></div>
+
+</body>
+</html>

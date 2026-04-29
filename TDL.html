@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FOCUS | To-Do-List Dashboard</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="favicon/favicon-96x96.png" sizes="96x96" />
+  <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg" />
+  <link rel="shortcut icon" href="favicon/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-title" content="FOCUS" />
+  <link rel="manifest" href="/site.webmanifest" />
+
+<style>
+/* ===================== BASE ===================== */
+body {
+    background: linear-gradient(135deg, #f5f6fa, #eef2ff);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    color: #111827;
+}
+
+h3 {
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+/* ================= LOADING SCREEN ================= */
+#loadingScreen {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg, #f5f6fa, #eef2ff);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    z-index: 9999;
+    color: #4f46e5;
+}
+
+.book-loader {
+    display: flex;
+    gap: 10px;
+}
+
+.book {
+    font-size: 2.5rem;
+    animation: bounce 0.6s infinite alternate;
+}
+
+.book:nth-child(2) {
+    animation-delay: 0.2s;
+}
+.book:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes bounce {
+    from { transform: translateY(0); opacity: 0.6; }
+    to { transform: translateY(-20px); opacity: 1; }
+}
+
+.loading-text {
+    margin-top: 15px;
+    font-size: 1rem;
+    opacity: 0.8;
+}
+
+/* ===================== CARDS ===================== */
+.card {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+    transition: 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+/* ===================== BUTTONS ===================== */
+.btn {
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    border: none;
+}
+
+.btn-primary:hover {
+    opacity: 0.92;
+}
+
+.btn-sm {
+    padding: 6px 10px;
+    font-size: 13px;
+}
+
+/* ===================== TASK UI ===================== */
+.task-item {
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    background: #f9fafb;
+    border-radius: 10px;
+    margin-bottom: 6px;
+    gap: 4px;
+}
+
+.task-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.task-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.task-name {
+    margin-left: 18px;
+    font-size: 14px;
+}
+
+.task-meta {
+    font-size: 12px;
+    color: #6b7280;
+    margin-left: 18px;
+}
+
+.task-done {
+    text-decoration: line-through;
+    color: #6b7280;
+}
+
+/* ===================== STATUS COLORS ===================== */
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+/* GREEN = COMPLETED */
+.status-completed { background: #10b981; }
+
+/* YELLOW = PENDING */
+.status-pending { background: #f59e0b; }
+
+/* RED = MISSING */
+.status-missing { background: #ef4444; }
+
+.status-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+}
+
+/* ===================== SUBJECT ===================== */
+.subject-title {
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.subject-stats {
+    font-size: 12px;
+    margin-top: 4px;
+    color: #6b7280;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.badge-soft {
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 999px;
+}
+
+.badge-pending { background: #fef3c7; color: #92400e; }
+.badge-missing { background: #fee2e2; color: #991b1b; }
+
+/* ===================== LAYOUT ===================== */
+.container {
+    max-width: 1200px;
+}
+
+/* ===================== CHART ===================== */
+canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* ===================== CALENDAR ===================== */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.calendar-day div {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 11px;
+  position: relative;
+  cursor: pointer;
+}
+
+.calendar-day {
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 8px;
+  min-height: 60px;
+  font-size: 12px;
+  cursor: pointer;
+  position: relative;
+}
+
+.calendar-day:hover {
+  background: #eef2ff;
+}
+
+.calendar-date {
+  font-weight: 600;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 3px;
+}
+
+.dot-missing { background: #ef4444; }
+.dot-pending { background: #f59e0b; }
+.dot-done { background: #10b981; }
+
+.today {
+  border: 2px solid #4f46e5;
+}
+
+.calendar-day-cell {
+  min-height: 70px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.day-number {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.status-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.status-pill {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.status-pill.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-pill.missing {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.calendar-day.selected {
+  outline: 2px solid #4f46e5;
+  background: rgba(79, 70, 229, 0.08);
+  border-radius: 10px;
+}
+
+#calendarTasks {
+  max-height: 260px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 6px;
+}
+
+/* optional nicer scrollbar */
+#calendarTasks::-webkit-scrollbar {
+  width: 6px;
+}
+
+#calendarTasks::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 10px;
+}
+
+#calendarTasks::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* ===================== LAYOUT TWEAKS ===================== */
+.stat-pill {
+  flex: 1;
+  padding: 12px;
+  text-align: center;
+  border: 2px solid #000;
+  border-radius: 40px;
+  background: #f8f8f8;
+  font-size: 14px;
+}
+
+/* FLEX WIDTH CONTROL */
+.chart-box {
+  flex: 0 0 50%;
+}
+
+.calendar-box {
+  flex: 0 0 30%;
+}
+
+.tasks-box {
+  flex: 0 0 20%;
+}
+
+/* OPTIONAL: nicer chart centering */
+.chart-inner {
+  height: 220px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.stat-box {
+  flex: 0 0 25%;
+  text-align: center;
+  padding: 12px;
+}
+
+.subject-title {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 992px) {
+  .chart-box,
+  .calendar-box,
+  .tasks-box {
+    width: 100% !important;
+  }
+
+  .chart-inner {
+    height: 220px;
+  }
+
+  .calendar-grid {
+    font-size: 12px;
+  }
+}
+
+</style>
+
+</head>
+
+<body>
+
+<!-- ================= LOADING SCREEN ================= -->
+<div id="loadingScreen">
+    <div class="book-loader">
+        <div class="book">📘</div>
+        <div class="book">📗</div>
+        <div class="book">📙</div>
+    </div>
+    <div class="loading-text"><b>Loading...</b></div>
+</div>
+
+<!-- Main Content -->
+<div class="container py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h3 style="color: #4f46e5;">📚 To-Do-List Dashboard</h3>
+
+    <a class="btn btn-sm btn-outline-dark" href="index.html">
+        ← Back
+    </a>
+  </div>
+
+  <hr>
+
+  <!-- HEADER -->
+  <div class="mb-4">
+
+    <!-- TOP ROW -->
+    <div class="row g-3 mb-4">
+
+      <!-- CHART (50%) -->
+      <div class="col-12 col-lg-6 col-xl-5">
+        <div class="card p-5 h-100 chart-box">
+          <div class="chart-inner">
+            <canvas id="statusChart"></canvas>
+          </div>
+          <h6 class="p-3 mb-0 text-center">🥧 Pie Chart 📊</h6>
+        </div>
+      </div>
+
+      <!-- CALENDAR (30%) -->
+      <div class="col-12 col-lg-6 col-xl-4">
+        <div class="card p-3 h-100 calendar-box">
+
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="p-2 mb-2 text-center w-100">📅 Calendar</h6>
+
+            <div class="d-flex align-items-center gap-2">
+              <button class="btn btn-sm btn-outline-dark" onclick="changeMonth(-1)">←</button>
+              <span id="calMonthLabel" class="fw-bold"></span>
+              <button class="btn btn-sm btn-outline-dark" onclick="changeMonth(1)">→</button>
+            </div>
+          </div>
+
+          <div id="calendarGrid" class="calendar-grid"></div>
+        </div>
+      </div>
+
+      <!-- TASKS (20%) -->
+      <div class="col-12 col-lg-12 col-xl-3">
+        <div class="card p-3 h-100 tasks-box">
+          <h6 class="text-center">Tasks 📝</h6>
+          <h6>Tasks on <span id="selectedDateLabel">—</span></h6>
+          <div id="calendarTasks"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- BOTTOM ROW (STATS) -->
+    <div class="row g-3">
+
+      <div class="col-6 col-md-3 col-12">
+        <div class="card stat-box p-3 text-center">
+          total <strong id="total">0</strong>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-3 col-12">
+        <div class="card stat-box p-3 text-center">
+          completed <strong id="done" style="color:#10b981;">0</strong>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-3 col-12">
+        <div class="card stat-box p-3 text-center">
+          pending <strong id="pending" style="color:#f59e0b;">0</strong>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-3 col-12">
+        <div class="card stat-box p-3 text-center">
+          missing <strong id="missing" style="color:#ef4444;">0</strong>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ADD SUBJECT + BULK DELETE -->
+  <div class="d-flex justify-content-end mb-3">
+
+    <div class="card p-2 d-flex flex-row gap-2 align-items-center">
+
+      <button class="btn btn-primary " onclick="openSubjectModal()">
+        + Add Subject
+      </button>
+
+      <button class="btn btn-danger" onclick="openBulkDeleteModal()">
+        Delete
+      </button>
+
+    </div>
+
+  </div>
+
+  <div id="bulkBar" class="card p-2 mb-3" style="display:none;">
+    <div class="d-flex justify-content-between align-items-center">
+
+      <div>
+        <strong id="bulkCount">0</strong> selected
+      </div>
+
+      <div class="d-flex gap-2">
+        <button class="btn btn-success btn-sm" onclick="bulkMarkDone()">
+          Mark Completed
+        </button>
+
+        <button class="btn btn-danger btn-sm" onclick="bulkDelete()">
+          Delete
+        </button>
+
+        <button class="btn btn-outline-dark btn-sm" onclick="clearSelection()">
+          Clear
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="tree"></div>
+
+</div>
+
+<!-- SUBJECT MODAL -->
+<div class="modal fade" id="subjectModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5>Add Subject</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input id="subjectInput" class="form-control" placeholder="Subject name"/>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="confirmAddSubject()">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TASK MODAL -->
+<div class="modal fade" id="taskModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5>Add Task</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <label class="form-label">Task Name <span class="text-danger">(required)</span></label>
+        <input id="taskName" class="form-control mb-2" placeholder="Task name"/>
+
+        <label class="form-label">Deadline</label>
+        <input id="taskDeadline" type="date" class="form-control mb-2"/>
+
+        <label class="form-label">Submission</label>
+        <select id="taskSubmission" class="form-control mb-2">
+          <option value="">Submission Type</option>
+          <option value="Online Submission">Online Submission</option>
+          <option value="Onsite Submission">Onsite Submission</option>
+          <option value="Online & Onsite Submission">Online & Onsite Submission</option>
+        </select>
+
+        <label class="form-label">Description</label>
+        <textarea id="taskDesc" class="form-control" placeholder="Description"></textarea>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="confirmAddTask()">Add</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- EDIT SUBJECT MODAL -->
+<div class="modal fade" id="editSubjectModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5>Edit Subject</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label">Subject Name</label>
+        <input id="editSubjectInput" class="form-control" placeholder="Edit subject name"/>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="confirmEditSubject()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT TASK -->
+<div class="modal fade" id="editTaskModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5>Edit Task</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <label class="form-label">Task Name</label>
+        <input id="editTaskName" class="form-control mb-2"/>
+
+        <label class="form-label">Deadline</label>
+        <input id="editTaskDeadline" type="date" class="form-control mb-2"/>
+
+        <label class="form-label">Submission</label>
+        <select id="editTaskSubmission" class="form-control mb-2">
+          <option value="">Submission Type</option>
+          <option value="Online Submission">Online Submission</option>
+          <option value="Onsite Submission">Onsite Submission</option>
+          <option value="Online and Onsite Submission">Online and Onsite Submission</option>
+        </select>
+
+        <label class="form-label">Description</label>
+        <textarea id="editTaskDesc" class="form-control"></textarea>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="confirmEditTask()">Save</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- DELETE ONE TASK CONFIRM MODAL -->
+<div class="modal fade" id="deleteTaskConfirmModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5>Confirm Task Deletion</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        Are you sure you want to delete this task? This action cannot be undone.
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-danger" onclick="confirmDeleteTask()">Delete</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- DELETE ONE SUBJECT CONFIRM MODAL -->
+<div class="modal fade" id="deleteConfirmModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5>Confirm Deletion</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete this subject? This cannot be undone.
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-danger" onclick="confirmDeleteSubject()">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BULK TASK MODAL -->
+<div class="modal fade" id="bulkTaskConfirmModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5>Confirm Bulk Delete</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        Are you sure you want to delete
+        <strong id="bulkTaskCount">0</strong> selected task(s)?
+        <br><br>
+        This action cannot be undone.
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-danger" onclick="confirmBulkDeleteTasks()">
+          Delete
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- DELETE BULK SUBJECTS CONFIRM -->
+<div class="modal fade" id="bulkDeleteModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5>Confirm Bulk Delete</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        Are you sure you want to delete <b id="bulkDeleteCount">0</b> selected subject(s)?
+        <br><br>
+        This action cannot be undone.
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-danger" onclick="confirmBulkDeleteSubjects()">
+          Delete
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+
+let subjects = JSON.parse(localStorage.getItem('todoSubjects') || '[]');
+/* USE THIS TO RESET CACHE 
+migrateOldSubmissionData();
+persist();
+*/
+let taskTarget = null;
+let editTarget = null;
+let deleteTarget = null;
+
+let editTaskTarget = null;
+let editTaskSubject = null;
+
+let deleteTaskTarget = null;
+let deleteTaskSubject = null;
+
+let selectedSubjects = [];
+
+let subjectModal, taskModal, editSubjectModal, deleteConfirmModal, editTaskModal;
+
+let statusChart;
+let selectedTasks = [];
+
+let currentDate = new Date();
+let selectedCalendarDate = null;
+let selectedDate = null;
+
+/* ===================== SUBMISSION NORMALIZER ===================== */
+function normalizeSubmission(value){
+  return value || "";
+}
+
+function migrateOldSubmissionData(){
+  subjects.forEach(s => {
+    s.tasks.forEach(t => {
+
+      if (t.submission === "Online CANVAS/LMS"){
+        t.submission = "Online Submission";
+      }
+
+      if (t.submission === "Onsite Handwritten"){
+        t.submission = "Onsite Submission";
+      }
+
+      if (t.submission === "Onsite Printed Hard Copy"){
+        t.submission = "Online & Onsite Submission";
+      }
+
+    });
+  });
+}
+
+function formatSubmission(value){
+  if (!value) return "";
+
+  if (value === "Online CANVAS/LMS") return "Online Submission";
+  if (value === "Onsite Handwritten") return "Onsite Submission";
+  if (value === "Onsite Printed Hard Copy") return "Online & Onsite Submission";
+
+  if (value === "Online") return "Online Submission";
+  if (value === "Onsite") return "Onsite Submission";
+  if (value === "Both") return "Online & Onsite Submission";
+
+  return value;
+}
+
+/* ===================== MODALS ===================== */
+function openSubjectModal(){
+  document.getElementById('subjectInput').value='';
+  subjectModal.show();
+}
+
+function confirmAddSubject(){
+  const text=document.getElementById('subjectInput').value.trim();
+  if(!text) return;
+
+  subjects.push({id:Date.now(),title:text,tasks:[],expanded:true});
+  persist();
+  subjectModal.hide();
+}
+
+/* ===== EDIT SUBJECT ===== */
+function openEditSubjectModal(id){
+  editTarget = id;
+  const subject = findSubject(id);
+  document.getElementById('editSubjectInput').value = subject.title;
+  editSubjectModal.show();
+}
+
+function confirmEditSubject(){
+  const value = document.getElementById('editSubjectInput').value.trim();
+  if(!value) return;
+
+  findSubject(editTarget).title = value;
+  persist();
+  editSubjectModal.hide();
+}
+
+/* ===== DELETE SUBJECT ===== */
+function openDeleteConfirmModal(id){
+  deleteTarget = id;
+  deleteConfirmModal.show();
+}
+
+function confirmDeleteSubject(){
+  subjects = subjects.filter(s => s.id !== deleteTarget);
+  persist();
+  deleteConfirmModal.hide();
+}
+
+/* ===== TASK ===== */
+function openTaskModal(id){
+  taskTarget=id;
+  taskModal.show();
+
+  document.getElementById('taskName').value='';
+  document.getElementById('taskDeadline').value='';
+  document.getElementById('taskSubmission').value='';
+  document.getElementById('taskDesc').value='';
+}
+
+function confirmAddTask(){
+  const name=document.getElementById('taskName').value.trim();
+  const deadline=document.getElementById('taskDeadline').value;
+  const submission=normalizeSubmission(document.getElementById('taskSubmission').value);
+  const desc=document.getElementById('taskDesc').value.trim();
+
+  if(!name) return;
+
+  findSubject(taskTarget).tasks.push({
+    id:Date.now(),
+    text:name,
+    deadline,
+    submission,
+    desc,
+    done:false
+  });
+
+  persist();
+  taskModal.hide();
+}
+
+/* ===== EDIT TASK ===== */
+function openEditTaskModal(sid, tid){
+  editTaskSubject = sid;
+  editTaskTarget = tid;
+
+  const t = findSubject(sid).tasks.find(x => x.id === tid);
+
+  document.getElementById('editTaskName').value = t.text || '';
+  document.getElementById('editTaskDeadline').value = t.deadline || '';
+  document.getElementById('editTaskSubmission').value = t.submission || '';
+  document.getElementById('editTaskDesc').value = t.desc || '';
+
+  editTaskModal.show();
+}
+
+function confirmEditTask(){
+  const t = findSubject(editTaskSubject).tasks.find(x => x.id === editTaskTarget);
+
+  t.text = document.getElementById('editTaskName').value.trim();
+  t.deadline = document.getElementById('editTaskDeadline').value;
+  t.submission = normalizeSubmission(document.getElementById('editTaskSubmission').value);
+  t.desc = document.getElementById('editTaskDesc').value.trim();
+
+  persist();
+  editTaskModal.hide();
+}
+
+/* ===== DELETE TASK (CONFIRMATION FLOW) ===== */
+function openDeleteTaskConfirmModal(sid, tid){
+  deleteTaskSubject = sid;
+  deleteTaskTarget = tid;
+
+  new bootstrap.Modal(document.getElementById('deleteTaskConfirmModal')).show();
+}
+
+function confirmDeleteTask(){
+  const subject = findSubject(deleteTaskSubject);
+  subject.tasks = subject.tasks.filter(t => t.id !== deleteTaskTarget);
+
+  persist();
+
+  bootstrap.Modal.getInstance(document.getElementById('deleteTaskConfirmModal')).hide();
+}
+
+/* ===== DELETE BULK SUBJECTS (CONFIRMATION FLOW) ===== */
+function openBulkDeleteModal(){
+  if (selectedSubjects.length === 0){
+    showToast("No subjects selected.");
+    return;
+  }
+
+  const modal = bootstrap.Modal.getOrCreateInstance(
+    document.getElementById("bulkDeleteModal")
+  );
+
+  document.getElementById("bulkDeleteCount").innerText = selectedSubjects.length;
+
+  modal.show();
+}
+
+function confirmBulkDeleteSubjects(){
+
+  if (selectedSubjects.length === 0) return;
+
+  subjects = subjects.filter(s => !selectedSubjects.includes(s.id));
+
+  selectedSubjects = [];
+
+  persist();
+
+  bootstrap.Modal.getOrCreateInstance(
+    document.getElementById("bulkDeleteModal")
+  ).hide();
+
+  render();
+}
+
+/* ===================== CORE ===================== */
+function findSubject(id){
+  return subjects.find(s=>s.id===id);
+}
+
+function toggleSelectTask(sid, tid){
+  const key = `${sid}-${tid}`;
+
+  if (selectedTasks.includes(key)){
+    selectedTasks = selectedTasks.filter(x => x !== key);
+  } else {
+    selectedTasks.push(key);
+  }
+
+  updateBulkBar();
+  render();
+}
+
+function isSelected(sid, tid){
+  return selectedTasks.includes(`${sid}-${tid}`);
+}
+
+function updateBulkBar(){
+  const bar = document.getElementById("bulkBar");
+  const count = document.getElementById("bulkCount");
+
+  if (!bar || !count) return;
+
+  count.innerText = selectedTasks.length;
+
+  if (selectedTasks.length > 0){
+    bar.style.display = "block";
+  } else {
+    bar.style.display = "none";
+  }
+}
+
+function clearSelection(){
+  selectedTasks = [];
+  updateBulkBar();
+  render();
+}
+
+function bulkMarkDone(){
+  selectedTasks.forEach(key => {
+    const [sid, tid] = key.split("-");
+    const s = findSubject(Number(sid));
+    const t = s?.tasks.find(x => x.id == tid);
+    if (t) t.done = true;
+  });
+
+  clearSelection();
+  persist();
+}
+
+function bulkDelete(){
+
+  if (selectedTasks.length === 0){
+    alert("No tasks selected.");
+    return;
+  }
+
+  document.getElementById("bulkTaskCount").innerText = selectedTasks.length;
+
+  bootstrap.Modal.getOrCreateInstance(
+    document.getElementById("bulkTaskConfirmModal")
+  ).show();
+}
+
+function confirmBulkDeleteTasks(){
+
+  const grouped = {};
+
+  selectedTasks.forEach(key => {
+    const [sid, tid] = key.split("-");
+    if (!grouped[sid]) grouped[sid] = [];
+    grouped[sid].push(Number(tid));
+  });
+
+  for (let sid in grouped){
+    const s = findSubject(Number(sid));
+    if (!s) continue;
+
+    s.tasks = s.tasks.filter(t => !grouped[sid].includes(t.id));
+  }
+
+  selectedTasks = [];
+
+  persist();
+
+  bootstrap.Modal.getOrCreateInstance(
+    document.getElementById("bulkTaskConfirmModal")
+  ).hide();
+
+  render();
+}
+
+function toggleTask(sid,tid){
+  const t=findSubject(sid).tasks.find(x=>x.id===tid);
+  t.done=!t.done;
+  persist();
+}
+
+function toggleSubject(id){
+  findSubject(id).expanded=!findSubject(id).expanded;
+  persist();
+}
+
+function toggleSubjectSelect(id, checked){
+  if (checked){
+    if (!selectedSubjects.includes(id)){
+      selectedSubjects.push(id);
+    }
+  } else {
+    selectedSubjects = selectedSubjects.filter(x => x !== id);
+  }
+
+  console.log("selectedSubjects:", selectedSubjects); // DEBUG
+  updateBulkBar();
+}
+
+function bulkDeleteSubjects(){
+
+  if (selectedSubjects.length === 0){
+    showToast("No subjects selected.");
+    return;
+  }
+
+  subjects = subjects.filter(s => !selectedSubjects.includes(s.id));
+
+  selectedSubjects = [];
+
+  persist();
+  updateBulkUI(); // IMPORTANT
+}
+
+function updateBulkUI(){
+  updateBulkBar();
+  render();
+}
+
+function showBulkToast(){
+  const toastEl = document.getElementById('bulkToast');
+  const toast = new bootstrap.Toast(toastEl);
+  toast.show();
+}
+
+/* ===================== STATUS ===================== */
+function getStatus(task,today){
+  if(task.done) return "completed";
+  if(task.deadline && task.deadline < today) return "missing";
+  return "pending";
+}
+
+/* ===================== RENDER ===================== */
+function render(){
+  document.getElementById('tree').innerHTML = subjects.map(renderSubject).join('');
+
+  const c = count();
+
+  document.getElementById('total').innerText=c.total;
+  document.getElementById('done').innerText=c.done;
+  document.getElementById('pending').innerText=c.pending;
+  document.getElementById('missing').innerText=c.missing;
+
+  renderChart(c.done,c.pending,c.missing);
+  updateBulkBar();
+  renderCalendar();
+}
+
+/* ===================== SUBJECT ===================== */
+function renderSubject(s){
+  const today = new Date().toISOString().split('T')[0];
+
+  const missingTasks = s.tasks.filter(t =>
+    !t.done && t.deadline && t.deadline < today
+  );
+
+  const pendingTasks = s.tasks.filter(t =>
+    !t.done && (t.deadline && t.deadline >= today)
+  );
+
+  const noDeadlineTasks = s.tasks.filter(t =>
+    !t.done && !t.deadline
+  );
+
+  const completedTasks = s.tasks.filter(t => t.done);
+
+  const statsHTML =
+    (missingTasks.length || pendingTasks.length)
+      ? `
+        <div class="d-flex gap-2 ms-2">
+          ${pendingTasks.length ? `<span class="badge-soft badge-pending">Pending: ${pendingTasks.length}</span>` : ''}
+          ${missingTasks.length ? `<span class="badge-soft badge-missing">Missing: ${missingTasks.length}</span>` : ''}
+        </div>
+      `
+      : '';
+
+  return `
+  <div class="card p-3 mb-2">
+
+    <div class="d-flex justify-content-between align-items-center">
+
+      <div class="d-flex align-items-center flex-wrap gap-2">
+
+        <!-- BULK CHECKBOX -->
+        <input type="checkbox"
+          onchange="toggleSubjectSelect(${s.id}, this.checked)"
+          ${selectedSubjects.includes(s.id) ? "checked" : ""}
+        />
+
+        <div class="subject-title">📘 ${s.title}</div>
+        ${statsHTML}
+
+      </div>
+
+      <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-primary" onclick="openTaskModal(${s.id})">+ Task</button>
+        <button class="btn btn-sm btn-outline-dark" onclick="toggleSubject(${s.id})">
+          ${s.expanded ? 'Hide task(s)' : 'Show task(s)'}
+        </button>
+        <button class="btn btn-sm btn-secondary" onclick="openEditSubjectModal(${s.id})">✏</button>
+        <button class="btn btn-sm btn-danger" onclick="openDeleteConfirmModal(${s.id})">🗑</button>
+      </div>
+
+    </div>
+
+    ${s.expanded ? (() => {
+
+      let html = '';
+
+      // ===================== MISSING (TOP PRIORITY) =====================
+      if (missingTasks.length > 0) {
+        html += missingTasks.map(t => renderTask(s,t)).join('');
+        html += `<hr>`;
+      }
+
+      // ===================== PENDING (MID PRIORITY) =====================
+      if (pendingTasks.length > 0) {
+        html += pendingTasks.map(t => renderTask(s,t)).join('');
+        html += `<hr>`;
+      }
+
+      // ===================== NO DEADLINE (LOW PRIORITY) =====================
+      if (noDeadlineTasks.length > 0) {
+        html += noDeadlineTasks.map(t => renderTask(s,t)).join('');
+      }
+
+      // ===================== COMPLETED (BOTTOM) =====================
+      if (completedTasks.length > 0) {
+        html += `<hr>`;
+        html += completedTasks.map(t => renderTask(s,t)).join('');
+      }
+
+      return html;
+
+    })() : ''}
+
+  </div>`;
+}
+
+/* ===================== TASK ===================== */
+function renderTask(s,t){
+  const today=new Date().toISOString().split('T')[0];
+  const status=getStatus(t,today);
+
+  return `
+  <div class="task-item">
+
+    <div class="task-top">
+      <div class="task-left">
+        <input type="checkbox"
+          class="form-check-input me-2"
+          onchange="toggleSelectTask(${s.id},${t.id})"
+          ${isSelected(s.id, t.id) ? "checked" : ""}>
+
+        <span class="status-dot status-${status}"></span>
+        <span class="status-text">${
+          status==="completed"?"COMPLETED":
+          status==="missing"?"MISSING":"PENDING"
+        }</span>
+      </div>
+
+      <div>
+        <button class="btn btn-sm btn-success" onclick="toggleTask(${s.id},${t.id})">✔</button>
+        <button class="btn btn-sm btn-secondary" onclick="openEditTaskModal(${s.id},${t.id})">✏</button>
+        <button class="btn btn-sm btn-danger" onclick="openDeleteTaskConfirmModal(${s.id},${t.id})">✖</button>
+      </div>
+    </div>
+
+    <div class="task-name ${t.done?'task-done':''}">${t.text}</div>
+    <div class="task-meta">
+      ${t.deadline?'📅 '+t.deadline:''}
+      ${t.submission ? '<br>📤 ' + formatSubmission(t.submission) : ''}
+      ${t.desc?'<br>'+t.desc:''}
+    </div>
+
+  </div>`;
+}
+
+/* ===================== CALENDAR ===================== */
+function renderCalendar(){
+  const grid = document.getElementById("calendarGrid");
+  if (!grid) return;
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+
+  const startDay = firstDay.getDay();
+  const daysInMonth = lastDay.getDate();
+
+  document.getElementById("calMonthLabel").innerText =
+    currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+  let html = "";
+
+  // empty cells before month start
+  for (let i = 0; i < startDay; i++){
+    html += `<div></div>`;
+  }
+
+  for (let d = 1; d <= daysInMonth; d++){
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+
+    const tasks = getTasksByDate(dateStr);
+
+    const today = new Date().toISOString().split('T')[0];
+    const isToday = dateStr === today;
+
+    // ===================== COUNT LOGIC =====================
+    let pending = 0;
+    let missing = 0;
+
+    tasks.forEach(t => {
+      if (t.done) return;
+
+      if (t.deadline && t.deadline < today) {
+        missing++;
+      } else {
+        pending++;
+      }
+    });
+
+    html += `
+      <div class="calendar-day 
+        ${isToday ? 'today' : ''} 
+        ${selectedDate === dateStr ? 'selected' : ''}"
+        onclick="selectCalendarDate('${dateStr}')">
+
+        <div class="calendar-date">${d}</div>
+
+        <div class="calendar-status">
+
+          ${pending > 0 ? `
+            <span class="cal-pill pending">
+              🟡 ${pending}
+            </span>` : ''}
+
+          ${missing > 0 ? `
+            <span class="cal-pill missing">
+              🔴 ${missing}
+            </span>` : ''}
+
+        </div>
+
+      </div>
+    `;
+  }
+
+  grid.innerHTML = html;
+}
+
+function changeMonth(offset){
+  currentDate.setMonth(currentDate.getMonth() + offset);
+  renderCalendar();
+}
+
+function getTasksByDate(date){
+  let results = [];
+
+  for (let s of subjects){
+    for (let t of s.tasks){
+      if (t.deadline === date){
+        results.push(t);
+      }
+    }
+  }
+
+  return results;
+}
+
+function selectCalendarDate(date){
+  selectedDate = date;
+
+  document.getElementById("selectedDateLabel").innerText = date;
+
+  renderCalendar();
+
+  const tasks = getTasksByDate(date);
+
+  document.getElementById("calendarTasks").innerHTML =
+  tasks.length
+    ? tasks.map(t => {
+        const subject = getSubjectTitleByTaskId(t.id);
+
+        return `
+          <div class="task-item">
+
+            <div class="task-meta" style="font-weight:600; color:#4f46e5;">
+              📘 ${subject}
+            </div>
+
+            <div class="task-name">${t.text}</div>
+
+            <div class="task-meta">
+              ${t.submission ? '📤 ' + formatSubmission(t.submission) : ''}
+            </div>
+
+          </div>
+        `;
+      }).join('')
+    : `<div class="text-muted">No tasks for this date.</div>`;
+}
+
+function getSubjectTitleByTaskId(taskId){
+  for (let s of subjects){
+    if (s.tasks.find(t => t.id === taskId)){
+      return s.title;
+    }
+  }
+  return "Unknown Subject";
+}
+
+/* ===================== COUNT (FIXED LOGIC) ===================== */
+function count(){
+  let total=0, done=0, pending=0, missing=0;
+
+  const today = new Date().toISOString().split('T')[0];
+
+  for (let s of subjects){
+    for (let t of s.tasks){
+      total++;
+
+      if (t.done){
+        done++;
+      }
+      else if (t.deadline && t.deadline < today){
+        missing++; // ONLY missing
+      }
+      else {
+        pending++; // ONLY pending
+      }
+    }
+  }
+
+  return { total, done, pending, missing };
+}
+
+/* ===================== CHART ===================== */
+function renderChart(done,pending,missing){
+  if(statusChart) statusChart.destroy();
+
+  statusChart = new Chart(document.getElementById('statusChart'), {
+    type:'pie',
+    data:{
+      labels:['Completed','Pending','Missing'],
+      datasets:[{
+        data:[done,pending,missing],
+        backgroundColor:['#10b981','#f59e0b','#ef4444']
+      }]
+    },
+    options:{
+      maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom'}}
+    }
+  });
+}
+
+/* ===================== STORAGE ===================== */
+function persist(){
+  localStorage.setItem('todoSubjects',JSON.stringify(subjects));
+  render();
+
+  subjects.forEach(s => {
+  s.tasks.forEach(t => {
+    t.submission = formatSubmission(t.submission);
+  });
+});
+}
+
+/* ===================== INIT ===================== */
+document.addEventListener('DOMContentLoaded',()=>{
+  subjectModal=new bootstrap.Modal(document.getElementById('subjectModal'));
+  taskModal=new bootstrap.Modal(document.getElementById('taskModal'));
+  editSubjectModal=new bootstrap.Modal(document.getElementById('editSubjectModal'));
+  deleteConfirmModal=new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+  editTaskModal=new bootstrap.Modal(document.getElementById('editTaskModal'));
+  render();
+});
+
+</script>
+
+<!-- LOADING SCRIPT -->
+<script>
+  window.addEventListener("load", function () {
+      setTimeout(() => {
+          document.getElementById("loadingScreen").style.display = "none";
+          document.getElementById("mainContent").style.display = "block";
+      }, 3000);
+  });
+</script>
+
+<!-- TOAST -->
+<div class="toast-container position-fixed top-0 end-0 p-3">
+
+  <div id="bulkToast" class="toast align-items-center text-bg-danger border-0" role="alert">
+
+    <div class="d-flex">
+      <div class="toast-body">
+        Please select at least one subject before deleting.
+      </div>
+
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+
+  </div>
+
+</div>
+
+</body>
+</html>
