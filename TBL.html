@@ -501,7 +501,7 @@ function saveClass() {
     if (!subjName.value) return showToast("Subject Name required", "danger");
 
     const bg = colorPicker.value;
-    const font = getContrastColor(bg);
+    const font = fontColorPicker.value || getContrastColor(bg);
 
     Object.assign(selectedCell.dataset, {
         code: subjCode.value,
@@ -510,7 +510,7 @@ function saveClass() {
         prof: prof.value,
         link: link.value,
         color: bg,
-        fontcolor: font
+        fontcolor: font // ✅ now correct
     });
 
     selectedCell.style.backgroundColor = bg;
@@ -723,7 +723,6 @@ async function exportPDF() {
                 ${name}<br>
                 ${room}<br>
                 ${prof}<br>
-                ${link ? `<span>${link}</span>` : ""}
             </div>
         `;
     });
