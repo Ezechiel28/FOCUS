@@ -372,6 +372,7 @@ canvas {
   .calendar-grid {
     font-size: 12px;
   }
+
 }
 
 </style>
@@ -925,7 +926,7 @@ function confirmDeleteTask(){
   bootstrap.Modal.getInstance(document.getElementById('deleteTaskConfirmModal')).hide();
 }
 
-/* ===== DELETE BULK SUBJECTS ===== */
+/* ===== DELETE BULK SUBJECTS (CONFIRMATION FLOW) ===== */
 function openBulkDeleteModal(){
   if (selectedSubjects.length === 0){
     showToast("No subjects selected.");
@@ -963,14 +964,98 @@ function findSubject(id){
   return subjects.find(s=>s.id===id);
 }
 
-/* ===================== NEW ADDITION ===================== */
-function getTaskStatus(task, today){
-  if(task.done) return "completed";
-  if(task.deadline && task.deadline < today) return "missing";
-  return "pending";
+function toggleSelectTask(sid, tid){
+  const key = `${sid}-${tid}`;
+
+  if (selectedTasks.includes(key)){
+    selectedTasks = selectedTasks.filter(x => x !== key);
+  } else {
+    selectedTasks.push(key);
+  }
+
+  updateBulkBar();
+  render();
 }
 
-/* ===================== CORE ACTIONS ===================== */
+function isSelected(sid, tid){
+  return selectedTasks.includes(`${sid}-${tid}`);
+}
+
+function updateBulkBar(){
+  const bar = document.getElementById("bulkBar");
+  const count = document.getElementById("bulkCount");
+
+  if (!bar || !count) return;
+
+  count.innerText = selectedTasks.length;
+
+  if (selectedTasks.length > 0){
+    bar.style.display = "block";
+  } else {
+    bar.style.display = "none";
+  }
+}
+
+function clearSelection(){
+  selectedTasks = [];
+  updateBulkBar();
+  render();
+}
+
+function bulkMarkDone(){
+  selectedTasks.forEach(key => {
+    const [sid, tid] = key.split("-");
+    const s = findSubject(Number(sid));
+    const t = s?.tasks.find(x => x.id == tid);
+    if (t) t.done = true;
+  });
+
+  clearSelection();
+  persist();
+}
+
+function bulkDelete(){
+
+  if (selectedTasks.length === 0){
+    alert("No tasks selected.");
+    return;
+  }
+
+  document.getElementById("bulkTaskCount").innerText = selectedTasks.length;
+
+  bootstrap.Modal.getOrCreateInstance(
+    document.getElementById("bulkTaskConfirmModal")
+  ).show();
+}
+
+function confirmBulkDeleteTasks(){
+
+  const grouped = {};
+
+  selectedTasks.forEach(key => {
+    const [sid, tid] = key.split("-");
+    if (!grouped[sid]) grouped[sid] = [];
+    grouped[sid].push(Number(tid));
+  });
+
+  for (let sid in grouped){
+    const s = findSubject(Number(sid));
+    if (!s) continue;
+
+    s.tasks = s.tasks.filter(t => !grouped[sid].includes(t.id));
+  }
+
+  selectedTasks = [];
+
+  persist();
+
+  bootstrap.Modal.getOrCreateInstance(
+    document.getElementById("bulkTaskConfirmModal")
+  ).hide();
+
+  render();
+}
+
 function toggleTask(sid,tid){
   const t=findSubject(sid).tasks.find(x=>x.id===tid);
   t.done=!t.done;
@@ -980,6 +1065,45 @@ function toggleTask(sid,tid){
 function toggleSubject(id){
   findSubject(id).expanded=!findSubject(id).expanded;
   persist();
+}
+
+function toggleSubjectSelect(id, checked){
+  if (checked){
+    if (!selectedSubjects.includes(id)){
+      selectedSubjects.push(id);
+    }
+  } else {
+    selectedSubjects = selectedSubjects.filter(x => x !== id);
+  }
+
+  console.log("selectedSubjects:", selectedSubjects); // DEBUG
+  updateBulkBar();
+}
+
+function bulkDeleteSubjects(){
+
+  if (selectedSubjects.length === 0){
+    showToast("No subjects selected.");
+    return;
+  }
+
+  subjects = subjects.filter(s => !selectedSubjects.includes(s.id));
+
+  selectedSubjects = [];
+
+  persist();
+  updateBulkUI(); // IMPORTANT
+}
+
+function updateBulkUI(){
+  updateBulkBar();
+  render();
+}
+
+function showBulkToast(){
+  const toastEl = document.getElementById('bulkToast');
+  const toast = new bootstrap.Toast(toastEl);
+  toast.show();
 }
 
 /* ===================== STATUS ===================== */
@@ -1040,6 +1164,7 @@ function renderSubject(s){
 
       <div class="d-flex align-items-center flex-wrap gap-2">
 
+        <!-- BULK CHECKBOX -->
         <input type="checkbox"
           onchange="toggleSubjectSelect(${s.id}, this.checked)"
           ${selectedSubjects.includes(s.id) ? "checked" : ""}
@@ -1063,35 +1188,236 @@ function renderSubject(s){
 
     ${s.expanded ? (() => {
 
-      let html = '';
+      const today = new Date().toISOString().split('T')[0];
 
-      if (missingTasks.length > 0) {
-        html += missingTasks.map(t => renderTask(s,t)).join('');
-        html += `<hr>`;
-      }
+      const sortedTasks = [...s.tasks].sort((a, b) => {
 
-      if (pendingTasks.length > 0) {
-        html += pendingTasks.map(t => renderTask(s,t)).join('');
-        html += `<hr>`;
-      }
+        const getPriority = (t) => {
+          if (t.done) return 3; // completed bottom
+          if (t.deadline && t.deadline < today) return 0; // missing top
+          return 1; // pending middle
+        };
 
-      if (noDeadlineTasks.length > 0) {
-        html += noDeadlineTasks.map(t => renderTask(s,t)).join('');
-      }
+        return getPriority(a) - getPriority(b);
+      });
 
-      if (completedTasks.length > 0) {
-        html += `<hr>`;
-        html += completedTasks.map(t => renderTask(s,t)).join('');
-      }
-
-      return html;
+      return sortedTasks.map(t => renderTask(s, t)).join('');
 
     })() : ''}
 
   </div>`;
 }
 
-/* ===================== COUNT (UPDATED) ===================== */
+/* ===================== TASK ===================== */
+function renderTask(s,t){
+  const today=new Date().toISOString().split('T')[0];
+  const status=getStatus(t,today);
+
+  return `
+  <div class="task-item">
+
+    <div class="task-top">
+      <div class="task-left">
+        <input type="checkbox"
+          class="form-check-input me-2"
+          onchange="toggleSelectTask(${s.id},${t.id})"
+          ${isSelected(s.id, t.id) ? "checked" : ""}>
+
+        <span class="status-dot status-${status}"></span>
+        <span class="status-text">${
+          status==="completed"?"COMPLETED":
+          status==="missing"?"MISSING":"PENDING"
+        }</span>
+      </div>
+
+      <div>
+        <button class="btn btn-sm btn-success" onclick="toggleTask(${s.id},${t.id})">✔</button>
+        <button class="btn btn-sm btn-secondary" onclick="openEditTaskModal(${s.id},${t.id})">✏</button>
+        <button class="btn btn-sm btn-danger" onclick="openDeleteTaskConfirmModal(${s.id},${t.id})">✖</button>
+      </div>
+    </div>
+
+    <div class="task-name ${t.done?'task-done':''}">${t.text}</div>
+    <div class="task-meta">
+      ${t.deadline?'📅 '+t.deadline:''}
+      ${t.submission ? '<br>📤 ' + formatSubmission(t.submission) : ''}
+      ${t.desc?'<br>'+t.desc:''}
+    </div>
+
+  </div>`;
+}
+
+/* ===================== CALENDAR ===================== */
+function renderCalendar(){
+  const grid = document.getElementById("calendarGrid");
+  if (!grid) return;
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+
+  const startDay = firstDay.getDay();
+  const daysInMonth = lastDay.getDate();
+
+  document.getElementById("calMonthLabel").innerText =
+    currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+  let html = "";
+
+  // empty cells before month start
+  for (let i = 0; i < startDay; i++){
+    html += `<div></div>`;
+  }
+
+  for (let d = 1; d <= daysInMonth; d++){
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+
+    const dayName = new Date(year, month, d)
+      .toLocaleDateString('en-US', { weekday: 'short' });
+
+    const tasks = getTasksByDate(dateStr);
+
+    const today = new Date().toISOString().split('T')[0];
+    const isToday = dateStr === today;
+
+    // ===================== COUNT LOGIC =====================
+    let pending = 0;
+    let missing = 0;
+
+    tasks.forEach(t => {
+      if (t.done) return;
+
+      if (t.deadline && t.deadline < today) {
+        missing++;
+      } else {
+        pending++;
+      }
+    });
+
+    html += `
+      <div class="calendar-day 
+        ${isToday ? 'today' : ''} 
+        ${selectedDate === dateStr ? 'selected' : ''}"
+        onclick="selectCalendarDate('${dateStr}')">
+
+        <div class="calendar-date">
+          <div style="font-size:10px; opacity:0.7;">${dayName}</div>
+          <div>${d}</div>
+        </div>
+
+        <div class="calendar-status">
+
+          ${pending > 0 ? `
+            <span class="cal-pill pending">
+              🟡 ${pending}
+            </span>` : ''}
+
+          ${missing > 0 ? `
+            <span class="cal-pill missing">
+              🔴 ${missing}
+            </span>` : ''}
+
+        </div>
+
+      </div>
+    `;
+  }
+
+  grid.innerHTML = html;
+}
+
+function changeMonth(offset){
+  currentDate.setMonth(currentDate.getMonth() + offset);
+  renderCalendar();
+}
+
+function getTasksByDate(date){
+  let results = [];
+
+  for (let s of subjects){
+    for (let t of s.tasks){
+      if (t.deadline === date){
+        results.push(t);
+      }
+    }
+  }
+
+  return results;
+}
+
+function selectCalendarDate(date){
+  selectedDate = date;
+
+  document.getElementById("selectedDateLabel").innerText = date;
+
+  renderCalendar();
+
+  const tasks = getTasksByDate(date);
+  const today = new Date().toISOString().split('T')[0];
+
+  function getStatus(t){
+    if (t.done) return "completed";
+    if (t.deadline && t.deadline < today) return "missing";
+    return "pending";
+  }
+
+  const sortedTasks = [...tasks].sort((a, b) => {
+    const order = { missing: 0, pending: 1, completed: 2 };
+
+    return order[getStatus(a)] - order[getStatus(b)];
+  });
+
+  document.getElementById("calendarTasks").innerHTML =
+    sortedTasks.length
+      ? sortedTasks.map(t => {
+
+          const subject = getSubjectTitleByTaskId(t.id);
+          const status = getStatus(t);
+
+          const badge =
+            status === "completed" ? "🟢" :
+            status === "missing" ? "🔴" :
+            "🟡";
+
+          return `
+            <div class="task-item">
+
+              <div class="task-meta" style="font-weight:600; color:#4f46e5;">
+
+                <div class="text-end" style= "font-weight: bold;">
+                  ${badge}
+                </div>
+
+                <div>
+                  📘 ${subject}
+                </div>
+
+              </div>
+
+              <div class="task-name">${t.text}</div>
+
+              <div class="task-meta">
+                ${t.submission ? '<br>📤 ' + formatSubmission(t.submission) : ''}
+              </div>
+
+            </div>
+          `;
+        }).join('')
+      : `<div class="text-muted">No tasks for this date.</div>`;
+}
+
+function getSubjectTitleByTaskId(taskId){
+  for (let s of subjects){
+    if (s.tasks.find(t => t.id === taskId)){
+      return s.title;
+    }
+  }
+  return "Unknown Subject";
+}
+
+/* ===================== COUNT (FIXED LOGIC) ===================== */
 function count(){
   let total=0, done=0, pending=0, missing=0;
 
@@ -1101,36 +1427,54 @@ function count(){
     for (let t of s.tasks){
       total++;
 
-      const status = getTaskStatus(t, today);
-
-      if (status === "completed") done++;
-      else if (status === "missing") missing++;
-      else pending++;
+      if (t.done){
+        done++;
+      }
+      else if (t.deadline && t.deadline < today){
+        missing++; // ONLY missing
+      }
+      else {
+        pending++; // ONLY pending
+      }
     }
   }
 
   return { total, done, pending, missing };
 }
 
-/* ===================== REST UNCHANGED ===================== */
+/* ===================== CHART ===================== */
+function renderChart(done,pending,missing){
+  if(statusChart) statusChart.destroy();
 
-function renderTask(s,t){ /* unchanged */ }
-function renderCalendar(){ /* unchanged */ }
-function getTasksByDate(date){ /* unchanged */ }
-function selectCalendarDate(date){ /* unchanged */ }
-function getSubjectTitleByTaskId(taskId){ /* unchanged */ }
-function renderChart(done,pending,missing){ /* unchanged */ }
+  statusChart = new Chart(document.getElementById('statusChart'), {
+    type:'pie',
+    data:{
+      labels:['Completed','Pending','Missing'],
+      datasets:[{
+        data:[done,pending,missing],
+        backgroundColor:['#10b981','#f59e0b','#ef4444']
+      }]
+    },
+    options:{
+      maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom'}}
+    }
+  });
+}
+
+/* ===================== STORAGE ===================== */
 function persist(){
   localStorage.setItem('todoSubjects',JSON.stringify(subjects));
   render();
 
   subjects.forEach(s => {
-    s.tasks.forEach(t => {
-      t.submission = formatSubmission(t.submission);
-    });
+  s.tasks.forEach(t => {
+    t.submission = formatSubmission(t.submission);
   });
+});
 }
 
+/* ===================== INIT ===================== */
 document.addEventListener('DOMContentLoaded',()=>{
   subjectModal=new bootstrap.Modal(document.getElementById('subjectModal'));
   taskModal=new bootstrap.Modal(document.getElementById('taskModal'));
