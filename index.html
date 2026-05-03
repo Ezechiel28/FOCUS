@@ -121,6 +121,68 @@ a {
     color: inherit;
 }
 
+/* ===================== MOTIVATION BOX ===================== */
+.motivation-box {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    background: rgba(255,255,255,0.25);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+    transition: all 0.5s ease;
+    padding: 0 18px;
+    margin-bottom: 0;
+}
+
+.motivation-box.show {
+    max-height: 140px;
+    opacity: 1;
+    padding: 14px 18px;
+    margin-bottom: 12px;
+}
+
+/* NEW INNER FLEX LAYER */
+.motivation-content {
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+}
+
+/* text takes all available space */
+.motivation-content > div {
+    flex: 1;
+}
+
+/* button pinned to far right */
+.motivation-close {
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    color: rgba(0,0,0,0.45);
+    font-size: 16px;
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: 0.2s ease;
+}
+
+.motivation-close:hover {
+    background: rgba(0,0,0,0.06);
+    color: #111827;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
 /* ===================== CARDS ===================== */
 .card {
     border-radius: 16px;
@@ -136,6 +198,18 @@ a {
     transform: translateY(-6px) scale(1.02);
     box-shadow: 0 0 25px rgba(99,102,241,0.35),
                 0 12px 35px rgba(0,0,0,0.12);
+}
+
+.card2 {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+    transition: 0.2s ease;
+}
+
+.card2:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
 }
 
 .span-2 {
@@ -221,25 +295,46 @@ a {
     gap: 18px;
 }
 
+/* ONLY mobile override */
+@media (max-width: 768px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* FORCE CARDS TO NATURAL HEIGHT */
+.card,
+.card2,
+.menu-card {
+    height: auto !important;
+    min-height: unset !important;
+}
+
 /* ===================== CONTINUE BOX ===================== */
 .continue-box {
     display: none;
     justify-content: space-between;
     align-items: center;
-
-    background: rgba(255,255,255,0.25);
-    backdrop-filter: blur(18px) saturate(180%);
-    -webkit-backdrop-filter: blur(18px) saturate(180%);
-
-    border: 1px solid rgba(255,255,255,0.35);
-    border-radius: 18px;
-
+    background: rgba(255, 255, 255, 0.85); /* more solid */
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: 14px;
     padding: 14px 18px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+    margin-bottom: 16px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
 
-    box-shadow: 0 8px 32px rgba(0,0,0,0.08),
-                inset 0 1px 0 rgba(255,255,255,0.4);
-
-    margin-bottom: 20px;
+.continue-box::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 4px;
+    background: linear-gradient(180deg, #4f46e5, #6366f1);
+    border-radius: 14px 0 0 14px;
 }
 
 /* ===================== FOOTER ===================== */
@@ -253,8 +348,53 @@ footer {
 
 /* ===================== RESPONSIVE ===================== */
 @media (max-width: 768px) {
-    .grid { grid-template-columns: 1fr; }
-    .hero h1 { font-size: 32px; }
+
+    /* prevent horizontal overflow globally */
+    html, body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    /* FIX GRID CORE ISSUE */
+    .grid {
+        width: 100%;
+        grid-template-columns: 1fr !important; /* Forces a single column */
+        gap: 14px;
+    }
+
+    /* Prevent the span-2 card from breaking the 1-column mobile layout */
+    .span-2 {
+        grid-column: span 1 !important; 
+    }
+
+    /* IMPORTANT: allow grid children to shrink properly */
+    .grid > * {
+        min-width: 0;
+    }
+
+    /* anchor cards must behave like real blocks */
+    a.card {
+        display: block !important; /* Changed from flex so text/icons stack normally */
+        width: 100%;
+        min-width: 0;
+    }
+
+    .card, .card2 {
+        width: 100%;
+        min-width: 0;
+    }
+
+    /* keep text from forcing weird overflow */
+    .menu-title, .menu-desc {
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+
+    /* disable hover scaling issues on mobile */
+    .card:hover {
+        transform: none !important;
+    }
 }
 </style>
 </head>
@@ -287,8 +427,20 @@ footer {
         <p>Your <span style="color: palevioletred; font-weight: bold;">Escolarian</span> academic command center — built for clarity, speed, and control.</p>
     </div>
 
+    <!-- MOTIVATION -->
+    <div id="motivationBox" class="card2 motivation-box">
+        <div class="motivation-content">
+            <div>
+                <strong id="motivationGreeting">Hey 👋</strong><br>
+                <span id="motivationQuote">Stay focused.</span>
+            </div>
+
+            <button class="motivation-close" onclick="closeMotivation()">✕</button>
+        </div>
+    </div>
+
     <!-- CONTINUE -->
-    <div id="continueBox" class="continue-box">
+    <div id="continueBox" class="card2 continue-box">
         <div>
             <strong>Continue where you left off</strong><br>
             <span class="text-primary" id="lastText">---</span>
@@ -458,7 +610,81 @@ function continueLast(){
     if(link) window.location.href = link;
 }
 
-document.addEventListener("DOMContentLoaded", loadContinue);
+document.addEventListener("DOMContentLoaded", () => {
+    loadContinue();
+    showMotivation();
+});
+
+const quotes = [
+    "Discipline beats motivation.",
+    "Do it even when you don’t feel like it.",
+    "Small progress is still progress.",
+    "Consistency builds success.",
+    "Focus on the system not the result.",
+    "You are closer than you think.",
+    "No distractions just execution.",
+    "Make today count.",
+    "Stay sharp stay consistent.",
+    "You didn’t come this far to stop."
+];
+
+function getGreeting(){
+    const hour = new Date().getHours();
+
+    if(hour < 12) return "Good morning ☀️";
+    if(hour < 18) return "Good afternoon 🌤️";
+    return "Good evening 🌙";
+}
+
+function showMotivation(){
+    const box = document.getElementById("motivationBox");
+
+    if(!box) return;
+
+    const now = Date.now();
+    const lastClosed = localStorage.getItem("motivationClosed");
+    const ONE_HOUR = 60 * 60 * 1000;
+
+    if(lastClosed && (now - lastClosed) < ONE_HOUR) return;
+
+    const quotes = [
+        "Discipline beats motivation.",
+        "Do it even when you don’t feel like it.",
+        "Small progress is still progress.",
+        "Consistency builds success.",
+        "Focus on the system not the result.",
+        "You are closer than you think.",
+        "No distractions just execution.",
+        "Make today count.",
+        "Stay sharp stay consistent.",
+        "You didn’t come this far to stop."
+    ];
+
+    const hour = new Date().getHours();
+    let greeting = "Hey 👋";
+    if(hour < 12) greeting = "Good morning ☀️";
+    else if(hour < 18) greeting = "Good afternoon 🌤️";
+    else greeting = "Good evening 🌙";
+
+    document.getElementById("motivationGreeting").innerText = greeting;
+    document.getElementById("motivationQuote").innerText =
+        quotes[Math.floor(Math.random() * quotes.length)];
+
+    box.classList.add("show");
+}
+
+function closeMotivation(){
+    const box = document.getElementById("motivationBox");
+
+    box.classList.remove("show");
+
+    localStorage.setItem("motivationClosed", Date.now());
+
+    // optional cleanup after animation
+    setTimeout(() => {
+        box.style.maxHeight = "0";
+    }, 500);
+}
 </script>
 
 <script>
@@ -488,31 +714,74 @@ window.addEventListener("load", () => {
 
 <script>
 window.addEventListener("load", () => {
+
     const loader = document.getElementById("loadingScreen");
 
+    // hide loader once
     setTimeout(() => {
         loader.style.opacity = "0";
         loader.style.visibility = "hidden";
-
-        setTimeout(() => {
-
-            const now = Date.now();
-            const lastShown = localStorage.getItem("infoModalLastShown");
-            const ONE_HOUR = 60 * 60 * 1000;
-
-            // show modal only if never shown OR 1 hour passed
-            if (!lastShown || (now - lastShown) > ONE_HOUR) {
-
-                const modal = new bootstrap.Modal(document.getElementById("infoModal"));
-                modal.show();
-
-                // save timestamp when shown
-                localStorage.setItem("infoModalLastShown", now);
-            }
-
-        }, 500);
-
+        loader.style.transition = "0.6s ease";
     }, 3000);
+
+    // after loader disappears → run logic
+    setTimeout(() => {
+
+        const now = Date.now();
+        const lastShown = localStorage.getItem("infoModalLastShown");
+        const ONE_HOUR = 60 * 60 * 1000;
+
+        function showMotivation() {
+            const box = document.getElementById("motivationBox");
+            if (!box) return;
+
+            const quotes = [
+                "Discipline beats motivation.",
+                "Do it even when you don’t feel like it.",
+                "Small progress is still progress.",
+                "Consistency builds success.",
+                "Focus on the system not the result.",
+                "You are closer than you think.",
+                "No distractions just execution.",
+                "Make today count.",
+                "Stay sharp stay consistent.",
+                "You didn’t come this far to stop."
+            ];
+
+            const hour = new Date().getHours();
+            let greeting = "Hey 👋";
+            if (hour < 12) greeting = "Good morning ☀️";
+            else if (hour < 18) greeting = "Good afternoon 🌤️";
+            else greeting = "Good evening 🌙";
+
+            document.getElementById("motivationGreeting").innerText = greeting;
+            document.getElementById("motivationQuote").innerText =
+                quotes[Math.floor(Math.random() * quotes.length)];
+
+            box.style.display = "flex";
+
+            setTimeout(() => {
+                box.classList.add("show");
+            }, 20);
+        }
+
+        // show info modal logic
+        if (!lastShown || (now - lastShown) > ONE_HOUR) {
+
+            const modal = new bootstrap.Modal(document.getElementById("infoModal"));
+            modal.show();
+
+            localStorage.setItem("infoModalLastShown", now);
+
+            document.getElementById("infoModal")
+                .addEventListener("hidden.bs.modal", showMotivation, { once: true });
+
+        } else {
+            showMotivation();
+        }
+
+    }, 3300); // after loader fade
+
 });
 </script>
 
