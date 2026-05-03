@@ -1127,6 +1127,48 @@ function render(){
   renderChart(c.done,c.pending,c.missing);
   updateBulkBar();
   renderCalendar();
+
+  // NEW: Keep the side task block updated if data changes while a date is selected
+  if (selectedDate) {
+    // Only update the HTML to prevent recursive renderCalendar loops
+    const tasks = getTasksByDate(selectedDate);
+    const today = new Date().toISOString().split('T')[0];
+
+    function getStatus(t){
+      if (t.done) return "completed";
+      if (t.deadline && t.deadline < today) return "missing";
+      return "pending";
+    }
+
+    const sortedTasks = [...tasks].sort((a, b) => {
+      const order = { missing: 0, pending: 1, completed: 2 };
+      return order[getStatus(a)] - order[getStatus(b)];
+    });
+
+    const calendarTasksEl = document.getElementById("calendarTasks");
+    if (calendarTasksEl) {
+        calendarTasksEl.innerHTML = sortedTasks.length
+          ? sortedTasks.map(t => {
+              const subject = getSubjectTitleByTaskId(t.id);
+              const status = getStatus(t);
+              const badge = status === "completed" ? "🟢" : status === "missing" ? "🔴" : "🟡";
+
+              return `
+                <div class="task-item">
+                  <div class="task-meta" style="font-weight:600; color:#4f46e5;">
+                    <div class="text-end" style= "font-weight: bold;">${badge}</div>
+                    <div>📘 ${subject}</div>
+                  </div>
+                  <div class="task-name">${t.text}</div>
+                  <div class="task-meta">
+                    ${t.submission ? '<br>📤 ' + formatSubmission(t.submission) : ''}
+                  </div>
+                </div>
+              `;
+            }).join('')
+          : `<div class="text-muted">No tasks for this date.</div>`;
+    }
+  }
 }
 
 /* ===================== SUBJECT ===================== */
@@ -1471,13 +1513,18 @@ function persist(){
 }
 
 /* ===================== INIT ===================== */
-document.addEventListener('DOMContentLoaded',()=>{
-  subjectModal=new bootstrap.Modal(document.getElementById('subjectModal'));
-  taskModal=new bootstrap.Modal(document.getElementById('taskModal'));
-  editSubjectModal=new bootstrap.Modal(document.getElementById('editSubjectModal'));
-  deleteConfirmModal=new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-  editTaskModal=new bootstrap.Modal(document.getElementById('editTaskModal'));
+document.addEventListener('DOMContentLoaded', () => {
+  subjectModal = new bootstrap.Modal(document.getElementById('subjectModal'));
+  taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
+  editSubjectModal = new bootstrap.Modal(document.getElementById('editSubjectModal'));
+  deleteConfirmModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+  editTaskModal = new bootstrap.Modal(document.getElementById('editTaskModal'));
+  
   render();
+
+  // NEW: Automatically select and display today's tasks on load
+  const todayStr = new Date().toISOString().split('T')[0];
+  selectCalendarDate(todayStr);
 });
 
 </script>
